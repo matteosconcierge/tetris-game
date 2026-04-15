@@ -241,6 +241,55 @@ document.addEventListener('keydown', event => {
     }
 });
 
+let touchStartX = 0;
+let touchStartY = 0;
+let lastMoveX = 0;
+let lastMoveY = 0;
+let isMoving = false;
+
+canvas.addEventListener('touchstart', event => {
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+    lastMoveX = touchStartX;
+    lastMoveY = touchStartY;
+    isMoving = false;
+    event.preventDefault();
+}, {passive: false});
+
+canvas.addEventListener('touchmove', event => {
+    const currentX = event.touches[0].clientX;
+    const currentY = event.touches[0].clientY;
+    const diffX = currentX - lastMoveX;
+    const diffY = currentY - lastMoveY;
+    
+    // Sensitivity thresholds
+    const touchSensitivity = 30; 
+
+    if (Math.abs(currentX - touchStartX) > 10 || Math.abs(currentY - touchStartY) > 10) {
+        isMoving = true;
+    }
+
+    if (Math.abs(diffX) > touchSensitivity) {
+        playerMove(diffX > 0 ? 1 : -1);
+        lastMoveX = currentX;
+    }
+
+    if (diffY > touchSensitivity) {
+        playerDrop();
+        lastMoveY = currentY;
+    }
+    
+    event.preventDefault();
+}, {passive: false});
+
+canvas.addEventListener('touchend', event => {
+    if (!isMoving) {
+        // Tap to rotate
+        playerRotate(1);
+    }
+    event.preventDefault();
+}, {passive: false});
+
 playerReset();
 updateScore();
 update();
