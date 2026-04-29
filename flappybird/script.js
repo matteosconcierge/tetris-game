@@ -20,8 +20,8 @@ const bird = {
     w: 34,
     h: 24,
     radius: 12,
-    gravity: 0.25,
-    jump: 4.6,
+    gravity: 0.3,
+    jump: 5.5,
     speed: 0,
     rotation: 0,
     
@@ -167,6 +167,11 @@ const bg = {
 
 // Event Listeners
 cvs.addEventListener("click", function() {
+    handleInput();
+});
+
+cvs.addEventListener("touchstart", function(e) {
+    e.preventDefault();
     handleInput();
 });
 
