@@ -13,6 +13,13 @@ const state = {
     gameOver: 2
 };
 
+// Background Clouds
+const clouds = {
+    position: [],
+    dx: 0.5,
+    draw: function() {} // Will be defined later
+};
+
 // Bird
 const bird = {
     x: 50,
@@ -32,27 +39,40 @@ const bird = {
         
         // Bird Body
         ctx.fillStyle = "#f7d302";
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fill();
         ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        
+        // Main body (oval)
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.radius + 4, this.radius, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
         
+        // Wing (animation based on frames)
+        let wingOffset = Math.sin(frames * 0.2) * 5;
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.ellipse(-8, wingOffset, 10, 6, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
         // Eye
         ctx.fillStyle = "white";
         ctx.beginPath();
-        ctx.arc(5, -4, 5, 0, Math.PI * 2);
+        ctx.arc(8, -4, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        
         ctx.fillStyle = "black";
         ctx.beginPath();
-        ctx.arc(7, -4, 2, 0, Math.PI * 2);
+        ctx.arc(10, -4, 2.5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Beak
+        // Beak (Protruding)
         ctx.fillStyle = "#f7941d";
         ctx.beginPath();
-        ctx.moveTo(8, 2);
+        ctx.moveTo(12, 0);
+        ctx.quadraticCurveTo(22, 2, 12, 6);
         ctx.lineTo(18, 5);
         ctx.lineTo(8, 8);
         ctx.fill();
@@ -111,13 +131,34 @@ const pipes = {
             
             // Top pipe
             ctx.fillStyle = "#73bf2e";
+            let gradTop = ctx.createLinearGradient(p.x, 0, p.x + this.w, 0);
+            gradTop.addColorStop(0, "#558022");
+            gradTop.addColorStop(0.5, "#73bf2e");
+            gradTop.addColorStop(1, "#558022");
+            ctx.fillStyle = gradTop;
+
             ctx.fillRect(p.x, topYPos, this.w, this.h);
             ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
             ctx.strokeRect(p.x, topYPos, this.w, this.h);
             
+            // Top pipe cap
+            ctx.fillRect(p.x - 5, topYPos + this.h - 20, this.w + 10, 20);
+            ctx.strokeRect(p.x - 5, topYPos + this.h - 20, this.w + 10, 20);
+            
             // Bottom pipe
+            let gradBot = ctx.createLinearGradient(p.x, 0, p.x + this.w, 0);
+            gradBot.addColorStop(0, "#558022");
+            gradBot.addColorStop(0.5, "#73bf2e");
+            gradBot.addColorStop(1, "#558022");
+            ctx.fillStyle = gradBot;
+
             ctx.fillRect(p.x, bottomYPos, this.w, this.h);
             ctx.strokeRect(p.x, bottomYPos, this.w, this.h);
+
+            // Bottom pipe cap
+            ctx.fillRect(p.x - 5, bottomYPos, this.w + 10, 20);
+            ctx.strokeRect(p.x - 5, bottomYPos, this.w + 10, 20);
         }
     },
     
@@ -161,7 +202,47 @@ const bg = {
         ctx.fillRect(0, cvs.height - 50, cvs.width, 50);
         ctx.strokeStyle = "#73bf2e";
         ctx.lineWidth = 2;
-        ctx.strokeRect(0, cvs.height - 50, cvs.width, 2);
+        
+        // Moving grass effect
+        ctx.beginPath();
+        ctx.moveTo(0, cvs.height - 50);
+        ctx.lineTo(cvs.width, cvs.height - 50);
+        ctx.stroke();
+
+        // Stripes on ground
+        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        let rectW = 20;
+        let offset = (frames * 2) % (rectW * 2);
+        for(let i = -rectW*2; i < cvs.width; i += rectW * 2) {
+            ctx.fillRect(i + offset, cvs.height - 50, rectW, 50);
+        }
+    }
+};
+
+// Clouds implementation
+clouds.update = function() {
+    if (frames % 150 == 0) {
+        this.position.push({
+            x: cvs.width,
+            y: Math.random() * 150,
+            w: 50 + Math.random() * 50
+        });
+    }
+    for(let i = 0; i < this.position.length; i++) {
+        this.position[i].x -= this.dx;
+        if(this.position[i].x + this.position[i].w < 0) {
+            this.position.shift();
+        }
+    }
+};
+
+clouds.draw = function() {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    for(let i = 0; i < this.position.length; i++) {
+        let p = this.position[i];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.w/2, 0, Math.PI * 2);
+        ctx.fill();
     }
 };
 
@@ -206,10 +287,14 @@ function draw() {
     pipes.draw();
     bg.draw();
     bird.draw();
+    clouds.draw();
     
     if (state.current == state.getReady) {
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(0, 0, cvs.width, cvs.height);
+        
+        // Draw "Get Ready" banner
+        ctx.lineWidth = 2;
         ctx.fillStyle = "white";
         ctx.font = "24px Arial";
         ctx.textAlign = "center";
@@ -231,6 +316,7 @@ function draw() {
 function update() {
     bird.update();
     pipes.update();
+    clouds.update();
 }
 
 function loop() {
