@@ -212,9 +212,9 @@ const bg = {
         // Stripes on ground
         ctx.fillStyle = "rgba(0,0,0,0.1)";
         let rectW = 20;
-        let offset = (frames * 2) % (rectW * 2);
+        let offset = (frames * pipes.dx) % (rectW * 2);
         for(let i = -rectW*2; i < cvs.width; i += rectW * 2) {
-            ctx.fillRect(i + offset, cvs.height - 50, rectW, 50);
+            ctx.fillRect(i - offset, cvs.height - 50, rectW, 50);
         }
     }
 };
@@ -237,11 +237,20 @@ clouds.update = function() {
 };
 
 clouds.draw = function() {
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
     for(let i = 0; i < this.position.length; i++) {
         let p = this.position[i];
+        let r = p.w / 2;
+        
+        // Main blob
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.w/2, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        // Fluff 1
+        ctx.arc(p.x - r * 0.5, p.y + r * 0.2, r * 0.7, 0, Math.PI * 2);
+        // Fluff 2
+        ctx.arc(p.x + r * 0.5, p.y + r * 0.2, r * 0.7, 0, Math.PI * 2);
+        // Top fluff
+        ctx.arc(p.x, p.y - r * 0.3, r * 0.8, 0, Math.PI * 2);
         ctx.fill();
     }
 };
@@ -283,11 +292,11 @@ function handleInput() {
 function draw() {
     ctx.fillStyle = "#70c5ce";
     ctx.fillRect(0, 0, cvs.width, cvs.height);
-    
-    pipes.draw();
-    bg.draw();
-    bird.draw();
+
     clouds.draw();
+    bg.draw();
+    pipes.draw();
+    bird.draw();
     
     if (state.current == state.getReady) {
         ctx.fillStyle = "rgba(0,0,0,0.5)";
