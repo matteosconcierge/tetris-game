@@ -3,14 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tetris</title>
-    <link rel="stylesheet" href="style.css">
+    <title>LocalAgent Arcades</title>
+    <style>
+        body {
+            background: #202028;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        h1 { font-size: 3em; margin-bottom: 0.5em; color: #fdfdfd; text-shadow: 2px 2px #000; }
+        .arcade-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            width: 90%;
+        }
+        .game-card {
+            background: #2c2c36;
+            border: 3px solid #444;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .game-card:hover {
+            transform: scale(1.05);
+            border-color: #00ffcc;
+            background: #363645;
+        }
+        .game-card h2 { margin-top: 0; color: #00ffcc; }
+        .game-card p { font-size: 0.9em; color: #ccc; }
+        .icon { font-size: 4em; margin-bottom: 15px; display: block; }
+    </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="tetris" width="240" height="400"></canvas>
-        <div id="score">Score: 0</div>
+    <h1>🕹️ LocalAgent Arcade</h1>
+    <div class="arcade-container">
+        <a href="tetris/index.html" class="game-card">
+            <span class="icon">🧱</span>
+            <h2>Retro Tetris</h2>
+            <p>Classic block stacker. Optimized for mobile and desktop.</p>
+        </a>
+        <a href="flappybird/index.html" class="game-card">
+            <span class="icon">🐦</span>
+            <h2>Flappy Bird</h2>
+            <p>Don't crash into the pipes! Simple and addictive.</p>
+        </a>
     </div>
-    <script src="script.js"></script>
 </body>
 </html>
