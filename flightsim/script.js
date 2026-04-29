@@ -87,6 +87,9 @@ scene.add(plane);
 
 // State
 const keys = {};
+let touchStart = null;
+let touchCurrent = null;
+let isThrottling = false;
 let currentSpeed = SPEED_MIN;
 
 // UI
@@ -97,7 +100,47 @@ const altEl = document.getElementById('alt');
 window.addEventListener('keydown', (e) => keys[e.code] = true);
 window.addEventListener('keyup', (e) => keys[e.code] = false);
 
+window.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        touchCurrent = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length > 1) {
+        isThrottling = !isThrottling; // Toggle throttle with second finger
+    }
+}, { passive: false });
+
+window.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+        touchCurrent = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+}, { passive: false });
+
+window.addEventListener('touchend', () => {
+    touchStart = null;
+    touchCurrent = null;
+});
+
 function handleControls() {
+    // Touch steering
+    if (touchStart && touchCurrent) {
+        const dx = (touchCurrent.x - touchStart.x) / window.innerWidth;
+        const dy = (touchCurrent.y - touchStart.y) / window.innerHeight;
+        
+        // Sensitivity scaling
+        const sensitivity = 2.0;
+        
+        // Pitch (Swipe up -> Nose down -> rotateX positive)
+        // Swipe up means dy is negative, but user wants nose down
+        // Actually dy is (current - start). 
+        // Swipe up: current is less than start, dy is negative.
+        // We want nose down (plane rotates forward/down).
+        plane.rotateX(-dy * sensitivity * ROTATION_SPEED);
+        
+        // Roll
+        plane.rotateZ(-dx * sensitivity * ROTATION_SPEED);
+    }
+
     // Pitch (W/S)
     if (keys['KeyW']) plane.rotateX(ROTATION_SPEED);
     if (keys['KeyS']) plane.rotateX(-ROTATION_SPEED);
@@ -107,7 +150,7 @@ function handleControls() {
     if (keys['KeyD']) plane.rotateZ(-ROTATION_SPEED);
     
     // Throttle (Space)
-    if (keys['Space']) {
+    if (keys['Space'] || isThrottling) {
         currentSpeed = Math.min(SPEED_MAX, currentSpeed + 0.05);
     } else {
         currentSpeed = Math.max(SPEED_MIN, currentSpeed - 0.02);
