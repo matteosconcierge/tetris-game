@@ -5,6 +5,10 @@ const SPEED_MIN = 0.5;
 const SPEED_MAX = 5.0;
 const ROTATION_SPEED = 0.03;
 
+let lastTime = 0;
+let accumulator = 0;
+const step = 1/60;
+
 // Scene Setup
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
@@ -122,28 +126,40 @@ function updateUI() {
     altEl.textContent = Math.round(plane.position.y * 10);
 }
 
-// Main Loop
-function animate() {
-    requestAnimationFrame(animate);
-    
+// Update logic moved out of animate
+function update() {
     handleControls();
-    
+
     // Move forward based on orientation
     const direction = new THREE.Vector3(0, 0, 1);
     direction.applyQuaternion(plane.quaternion);
     plane.position.add(direction.multiplyScalar(currentSpeed));
-    
+
     updateCamera();
     updateUI();
+}
+
+// Main Loop with Delta-time
+function animate(timestamp) {
+    requestAnimationFrame(animate);
     
+    if (!lastTime) lastTime = timestamp;
+    let deltaTime = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    accumulator += deltaTime;
+    while (accumulator >= step) {
+        update();
+        accumulator -= step;
+    }
+
     renderer.render(scene, camera);
 }
 
-// Window Resize
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-animate();
+requestAnimationFrame(animate);

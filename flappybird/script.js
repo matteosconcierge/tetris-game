@@ -2,8 +2,11 @@ const cvs = document.getElementById("flappy");
 const ctx = cvs.getContext("2d");
 const scoreElement = document.getElementById("score");
 
-let frames = 0;
 let score = 0;
+let lastTime = 0;
+let accumulator = 0;
+const step = 1/60; // Target 60 FPS logic
+let virtualFrames = 0; // Replacement for frames to keep animations synced
 
 // Game States
 const state = {
@@ -17,7 +20,7 @@ const state = {
 const clouds = {
     position: [],
     dx: 0.5,
-    draw: function() {} // Will be defined later
+    draw: function() {} 
 };
 
 // Bird
@@ -49,7 +52,7 @@ const bird = {
         ctx.stroke();
         
         // Wing (animation based on frames)
-        let wingOffset = Math.sin(frames * 0.2) * 5;
+        let wingOffset = Math.sin(virtualFrames * 0.2) * 5;
         ctx.fillStyle = "#fff";
         ctx.beginPath();
         ctx.ellipse(-8, wingOffset, 10, 6, -0.2, 0, Math.PI * 2);
@@ -87,7 +90,7 @@ const bird = {
     
     update: function() {
         if (state.current == state.getReady) {
-            this.y = 150 + Math.sin(frames * 0.1) * 5;
+            this.y = 150 + Math.sin(virtualFrames * 0.1) * 5;
             this.rotation = 0;
         } else {
             this.speed += this.gravity;
@@ -165,7 +168,7 @@ const pipes = {
     update: function() {
         if (state.current !== state.game) return;
         
-        if (frames % 100 == 0) {
+        if (Math.floor(virtualFrames) % 100 == 0 && Math.floor(virtualFrames) !== Math.floor(virtualFrames - 1)) {
             this.position.push({
                 x: cvs.width,
                 y: this.maxYPos * (Math.random() + 1)
@@ -212,7 +215,7 @@ const bg = {
         // Stripes on ground
         ctx.fillStyle = "rgba(0,0,0,0.1)";
         let rectW = 20;
-        let offset = (frames * pipes.dx) % (rectW * 2);
+        let offset = (virtualFrames * pipes.dx) % (rectW * 2);
         for(let i = -rectW*2; i < cvs.width; i += rectW * 2) {
             ctx.fillRect(i - offset, cvs.height - 50, rectW, 50);
         }
@@ -221,7 +224,7 @@ const bg = {
 
 // Clouds implementation
 clouds.update = function() {
-    if (frames % 150 == 0) {
+    if (Math.floor(virtualFrames) % 150 == 0 && Math.floor(virtualFrames) !== Math.floor(virtualFrames - 1)) {
         this.position.push({
             x: cvs.width,
             y: Math.random() * 150,
@@ -326,13 +329,23 @@ function update() {
     bird.update();
     pipes.update();
     clouds.update();
+    virtualFrames++;
 }
 
-function loop() {
-    update();
+function loop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    let deltaTime = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    accumulator += deltaTime;
+
+    while (accumulator >= step) {
+        update();
+        accumulator -= step;
+    }
+
     draw();
-    frames++;
     requestAnimationFrame(loop);
 }
 
-loop();
+requestAnimationFrame(loop);
