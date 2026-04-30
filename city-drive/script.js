@@ -35,38 +35,45 @@ function init() {
     sunLight.castShadow = true;
     scene.add(sunLight);
 
-    // Ground
+    // City Config
+    const BLOCK_SIZE = 25;
+    const STREET_SIZE = 15;
+    const GRID_SIZE = BLOCK_SIZE + STREET_SIZE; // 40
+    const CITY_RADIUS = 200;
+
+    // Base Ground (Grass/Dirt)
     const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // City Building Blocks
-    for (let x = -100; x <= 100; x += 40) {
-        for (let z = -100; z <= 100; z += 40) {
-            if (x === 0 && z === 0) continue;
-            createBuildingBlock(x, z);
+    // City Grid Generation
+    for (let x = -CITY_RADIUS; x <= CITY_RADIUS; x += GRID_SIZE) {
+        for (let z = -CITY_RADIUS; z <= CITY_RADIUS; z += GRID_SIZE) {
+            // Create Building Block (Sidewalk + Buildings)
+            createCityBlock(x, z, BLOCK_SIZE);
+            
+            // Create Roads in between
+            if (x < CITY_RADIUS) createRoad(x + BLOCK_SIZE/2 + STREET_SIZE/2, z, STREET_SIZE, GRID_SIZE, 'z');
+            if (z < CITY_RADIUS) createRoad(x, z + BLOCK_SIZE/2 + STREET_SIZE/2, GRID_SIZE, STREET_SIZE, 'x');
         }
     }
 
-    // Create Traffic
-    const roadX = [-80, -40, 0, 40, 80];
-    const roadZ = [-80, -40, 0, 40, 80];
-    
-    roadX.forEach(x => {
-        for(let i=0; i<3; i++) createTrafficCar(x, (Math.random() - 0.5) * 400, 'z');
-    });
-    roadZ.forEach(z => {
-        for(let i=0; i<3; i++) createTrafficCar((Math.random() - 0.5) * 400, z, 'x');
-    });
+    // Create Increased Traffic
+    for(let i=0; i<60; i++) {
+        const lane = (Math.floor(Math.random() * (CITY_RADIUS*2/GRID_SIZE)) - CITY_RADIUS/GRID_SIZE) * GRID_SIZE + GRID_SIZE/2;
+        const pos = (Math.random() - 0.5) * CITY_RADIUS * 2;
+        const axis = Math.random() > 0.5 ? 'x' : 'z';
+        createTrafficCar(axis === 'x' ? pos : lane, axis === 'z' ? pos : lane, axis);
+    }
 
-    // Create Pedestrians
-    for(let i=0; i<40; i++) {
-        const bx = (Math.floor(Math.random() * 6) - 2.5) * 40;
-        const bz = (Math.floor(Math.random() * 6) - 2.5) * 40;
-        createPedestrian(bx + 10, bz + 10);
+    // Create Increased Pedestrians
+    for(let i=0; i<80; i++) {
+        const bx = (Math.floor(Math.random() * 10) - 5) * GRID_SIZE;
+        const bz = (Math.floor(Math.random() * 10) - 5) * GRID_SIZE;
+        createPedestrian(bx + (Math.random() - 0.5) * BLOCK_SIZE, bz + (Math.random() - 0.5) * BLOCK_SIZE);
     }
 
     // Player (Walking mode) - Replaced CapsuleGeometry with BoxGeometry for compatibility with r128
@@ -96,27 +103,71 @@ function init() {
     window.addEventListener('resize', onWindowResize, false);
 }
 
-function createBuildingBlock(x, z) {
-    const size = 15;
-    const height = 10 + Math.random() * 30;
-    const geo = new THREE.BoxGeometry(size, height, size);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    const b = new THREE.Mesh(geo, mat);
+function createCityBlock(x, z, size) {
+    // Sidewalk
+    const sideGeo = new THREE.PlaneGeometry(size, size);
+    const sideMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+    const sidewalk = new THREE.Mesh(sideGeo, sideMat);
+    sidewalk.rotation.x = -Math.PI / 2;
+    sidewalk.position.set(x, 0.05, z);
+    sidewalk.receiveShadow = true;
+    scene.add(sidewalk);
+
+    // Buildings on top of sidewalk
+    if (x === 0 && z === 0) return; // Leave center clear for spawn
+    
+    const bSize = size * 0.7;
+    const height = 15 + Math.random() * 40;
+    const bGeo = new THREE.BoxGeometry(bSize, height, bSize);
+    const colors = [0x555555, 0x777777, 0x444466, 0x664444];
+    const bMat = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random()*colors.length)] });
+    const b = new THREE.Mesh(bGeo, bMat);
     b.position.set(x, height / 2, z);
     b.castShadow = true;
     b.receiveShadow = true;
     scene.add(b);
 
-    buildings.push({ x: x, z: z, size: size });
+    buildings.push({ x: x, z: z, size: bSize });
 
-    // Windows
-    const windowGeo = new THREE.PlaneGeometry(1, 1);
-    const windowMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
-    for(let i=0; i<5; i++) {
-        const w = new THREE.Mesh(windowGeo, windowMat);
-        w.position.set(x + size/2 + 0.1, Math.random() * height, z + (Math.random() - 0.5) * size);
-        w.rotation.y = Math.PI / 2;
+    // Windows for realism
+    const winGeo = new THREE.PlaneGeometry(1, 1);
+    const winMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+    for(let i=0; i<12; i++) {
+        const w = new THREE.Mesh(winGeo, winMat);
+        const side = Math.floor(Math.random() * 4);
+        const h = 2 + Math.random() * (height - 4);
+        const off = (Math.random() - 0.5) * bSize;
+        if(side === 0) w.position.set(x + bSize/2 + 0.05, h, z + off), w.rotation.y = Math.PI/2;
+        if(side === 1) w.position.set(x - bSize/2 - 0.05, h, z + off), w.rotation.y = -Math.PI/2;
+        if(side === 2) w.position.set(x + off, h, z + bSize/2 + 0.05);
+        if(side === 3) w.position.set(x + off, h, z - bSize/2 - 0.05), w.rotation.y = Math.PI;
         scene.add(w);
+    }
+}
+
+function createRoad(x, z, width, length, orientation) {
+    const roadGeo = new THREE.PlaneGeometry(width, length);
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const road = new THREE.Mesh(roadGeo, roadMat);
+    road.rotation.x = -Math.PI / 2;
+    road.position.set(x, 0.02, z);
+    if(orientation === 'z') road.rotation.z = Math.PI / 2;
+    road.receiveShadow = true;
+    scene.add(road);
+
+    // Lane markings
+    const lineGeo = new THREE.PlaneGeometry(0.2, 2);
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for(let i = -length/2; i < length/2; i += 6) {
+        const line = new THREE.Mesh(lineGeo, lineMat);
+        line.rotation.x = -Math.PI / 2;
+        if(orientation === 'x') {
+            line.position.set(x, 0.03, z + i);
+        } else {
+            line.position.set(x + i, 0.03, z);
+            line.rotation.z = Math.PI / 2;
+        }
+        scene.add(line);
     }
 }
 
@@ -256,18 +307,22 @@ function animate() {
 }
 
 function updateTraffic(delta) {
+    const LIMIT = 300;
     trafficCars.forEach(tc => {
         if(tc.axis === 'z') {
             tc.mesh.position.z += tc.speed * delta;
-            if(tc.mesh.position.z > 250) tc.mesh.position.z = -250;
+            if(tc.mesh.position.z > LIMIT) tc.mesh.position.z = -LIMIT;
+            if(tc.mesh.position.z < -LIMIT) tc.mesh.position.z = LIMIT;
         } else {
             tc.mesh.position.x += tc.speed * delta;
-            if(tc.mesh.position.x > 250) tc.mesh.position.x = -250;
+            if(tc.mesh.position.x > LIMIT) tc.mesh.position.x = -LIMIT;
+            if(tc.mesh.position.x < -LIMIT) tc.mesh.position.x = LIMIT;
         }
     });
 }
 
 function updatePedestrians(delta) {
+    const P_LIMIT = 250;
     pedestrians.forEach(p => {
         p.changeDirTimer -= delta;
         if(p.changeDirTimer <= 0) {
@@ -281,9 +336,9 @@ function updatePedestrians(delta) {
         p.mesh.rotation.y = -p.dir + Math.PI/2;
 
         if(checkBuildingCollision(p.mesh.position, 0.4) || 
-           Math.abs(p.mesh.position.x) > 200 || Math.abs(p.mesh.position.z) > 200) {
+           Math.abs(p.mesh.position.x) > P_LIMIT || Math.abs(p.mesh.position.z) > P_LIMIT) {
             p.mesh.position.copy(oldPos);
-            p.dir += Math.PI; // Turn around
+            p.dir += Math.PI * (0.5 + Math.random()); // Change direction
         }
     });
 }
