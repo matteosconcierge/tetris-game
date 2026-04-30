@@ -35,13 +35,18 @@ const segments = 100;
 const geometry = new THREE.PlaneGeometry(terrainSize, terrainSize, segments, segments);
 const material = new THREE.MeshPhongMaterial({ color: 0x3c9b19, flatShading: true });
 
+function getGroundHeight(x, z) {
+    // Matches the terrain generation noise
+    const noise = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 10 
+                + Math.sin(x * 0.01) * 20;
+    return noise;
+}
+
 // Simple heightmap generation
 const posAttr = geometry.attributes.position;
 for (let i = 0; i < posAttr.count; i++) {
     const x = posAttr.getX(i);
-    const y = posAttr.getY(i);
-    const noise = Math.sin(x * 0.05) * Math.cos(y * 0.05) * 10 
-                + Math.sin(x * 0.01) * 20;
+    const noise = getGroundHeight(x, posAttr.getY(i));
     posAttr.setZ(i, noise);
 }
 geometry.computeVertexNormals();
@@ -87,6 +92,24 @@ scene.add(plane);
 
 // State
 const keys = {};
+let isCrashed = false;
+let explosionParticles = [];
+const crashOverlay = document.getElementById('crash-overlay');
+
+function resetGame() {
+    isCrashed = false;
+    crashOverlay.style.display = 'none';
+    plane.position.set(0, 50, 0);
+    plane.quaternion.set(0, 0, 0, 1);
+    currentSpeed = SPEED_MIN;
+    isThrottling = false;
+    
+    // Clear particles
+    explosionParticles.forEach(p => scene.remove(p));
+    explosionParticles = [];
+    scene.background = new THREE.Color(0x87ceeb); // Reset sky color
+}
+
 let touchStart = null;
 let touchCurrent = null;
 let isThrottling = false;
@@ -101,6 +124,10 @@ window.addEventListener('keydown', (e) => keys[e.code] = true);
 window.addEventListener('keyup', (e) => keys[e.code] = false);
 
 window.addEventListener('touchstart', (e) => {
+    if (isCrashed) {
+        resetGame();
+        return;
+    }
     if (e.touches.length === 1) {
         touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         touchCurrent = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -122,6 +149,8 @@ window.addEventListener('touchend', () => {
 });
 
 function handleControls() {
+    if (isCrashed) return;
+
     // Touch steering
     if (touchStart && touchCurrent) {
         const dx = (touchCurrent.x - touchStart.x) / window.innerWidth;
@@ -169,6 +198,19 @@ function updateUI() {
     altEl.textContent = Math.round(plane.position.y * 10);
 }
 
+function updateParticles() {
+    for (let i = explosionParticles.length - 1; i >= 0; i--) {
+        const p = explosionParticles[i];
+        p.position.add(p.userData.velocity);
+        p.userData.velocity.y -= 0.01; // Gravity on particles
+        p.material.opacity -= 0.02;
+        if (p.material.opacity <= 0) {
+            scene.remove(p);
+            explosionParticles.splice(i, 1);
+        }
+    }
+}
+
 // Update logic moved out of animate
 function update() {
     handleControls();
@@ -178,9 +220,60 @@ function update() {
     direction.applyQuaternion(plane.quaternion);
     plane.position.add(direction.multiplyScalar(currentSpeed));
 
+    updateParticles();
+
     updateCamera();
     updateUI();
+
+    // Collision detection
+    const groundH = getGroundHeight(plane.position.x, plane.position.z);
+    if (plane.position.y < groundH + 1) {
+        crash();
+    }
 }
+
+function crash() {
+    isCrashed = true;
+    currentSpeed = 0;
+    
+    // Screen shake / Background flare
+    scene.background = new THREE.Color(0xff4400);
+    
+    // Create explosion particles
+    const particleCount = 20;
+    const pGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    for (let i = 0; i < particleCount; i++) {
+        const pMat = new THREE.MeshPhongMaterial({ 
+            color: Math.random() > 0.5 ? 0xffaa00 : 0xff0000,
+            transparent: true,
+            opacity: 1.0
+        });
+        const p = new THREE.Mesh(pGeom, pMat);
+        p.position.copy(plane.position);
+        p.userData.velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.5,
+            Math.random() * 0.5,
+            (Math.random() - 0.5) * 0.5
+        );
+        explosionParticles.push(p);
+        scene.add(p);
+    }
+
+    // Visual crash tilt
+    plane.rotation.z += 0.5;
+
+    crashOverlay.style.display = 'flex';
+    
+    // Random 'crash' tilt
+    plane.rotation.z += Math.random() * 0.5 - 0.25;
+    plane.rotation.x += Math.random() * 0.5 - 0.25;
+
+    window.addEventListener('keydown', function onCrashKey() {
+        resetGame();
+        window.removeEventListener('keydown', onCrashKey);
+    }, { once: true });
+}
+
 
 // Main Loop with Delta-time
 function animate(timestamp) {
