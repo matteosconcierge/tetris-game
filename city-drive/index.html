@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>City Drive 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        canvas { display: block; }
+        #overlay {
+            position: absolute; top: 20px; left: 20px; color: #fff;
+            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;
+            pointer-events: none;
+        }
+        #controls-hint {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px;
+            text-align: center; font-size: 14px; line-height: 1.5;
+        }
+        .back-btn {
+            position: absolute; top: 20px; right: 20px;
+            padding: 10px 15px; background: #ff3366; color: #fff;
+            text-decoration: none; border-radius: 5px; font-weight: bold;
+        }
+        #mobile-controls {
+            position: absolute; bottom: 30px; width: 100%; height: 150px;
+            display: none; justify-content: space-between; align-items: center;
+            padding: 0 30px; box-sizing: border-box; pointer-events: none;
+        }
+        .joystick-zone {
+            width: 120px; height: 120px; background: rgba(255,255,255,0.1);
+            border-radius: 50%; pointer-events: auto; border: 2px solid rgba(255,255,255,0.3);
+        }
+        .action-button {
+            width: 70px; height: 70px; background: rgba(255,51,102,0.6);
+            border-radius: 50%; color: #fff; display: flex; align-items: center;
+            justify-content: center; font-weight: bold; pointer-events: auto;
+            border: none; user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        @media (max-width: 768px) {
+            #mobile-controls { display: flex; }
+            #controls-hint { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        <div id="status">Walking</div>
+        <div id="speed">Speed: 0 km/h</div>
+    </div>
+    <a href="../index.html" class="back-btn">Exit</a>
+    <div id="controls-hint">
+        <b>Walk:</b> WASD | <b>Enter/Exit Car:</b> F | <b>Drive:</b> WASD
+    </div>
+
+    <div id="mobile-controls">
+        <div id="move-joystick" class="joystick-zone"></div>
+        <button id="enter-btn" class="action-button">ENTER</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
