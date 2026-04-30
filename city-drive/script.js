@@ -290,6 +290,35 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+function checkEntityCollision(pos, radius, ignoreList = []) {
+    // Check Buildings
+    if (checkBuildingCollision(pos, radius)) return true;
+
+    // Check Traffic Cars (treated as OBB/Boxes, but simple radius for now)
+    for (let tc of trafficCars) {
+        if (ignoreList.includes(tc.mesh)) continue;
+        const dist = pos.distanceTo(tc.mesh.position);
+        if (dist < radius + 2) return true; // Car is roughly 4 units long
+    }
+
+    // Check Pedestrians
+    for (let p of pedestrians) {
+        if (ignoreList.includes(p.mesh)) continue;
+        const dist = pos.distanceTo(p.mesh.position);
+        if (dist < radius + 0.5) return true;
+    }
+
+    // Check Player/Controlled Car
+    if (!ignoreList.includes(player) && !isDriving) {
+        if (pos.distanceTo(player.position) < radius + 0.6) return true;
+    }
+    if (!ignoreList.includes(car)) {
+        if (pos.distanceTo(car.position) < radius + 2) return true;
+    }
+
+    return false;
+}
+
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
@@ -309,6 +338,22 @@ function animate() {
 function updateTraffic(delta) {
     const LIMIT = 300;
     trafficCars.forEach(tc => {
+        // Simple AI: Check if someone is in front
+        let blocked = false;
+        const rayPos = tc.mesh.position.clone();
+        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(tc.mesh.quaternion);
+        rayPos.add(forward.multiplyScalar(5)); // Check 5 units ahead
+
+        if (checkEntityCollision(rayPos, 1.5, [tc.mesh])) {
+            blocked = true;
+        }
+
+        if (blocked) {
+            tc.speed = Math.max(0, tc.speed - 20 * delta); // Brake
+        } else {
+            tc.speed = Math.min(20, tc.speed + 10 * delta); // Accel to cruise
+        }
+
         if(tc.axis === 'z') {
             tc.mesh.position.z += tc.speed * delta;
             if(tc.mesh.position.z > LIMIT) tc.mesh.position.z = -LIMIT;
@@ -335,7 +380,7 @@ function updatePedestrians(delta) {
         p.mesh.position.z += Math.sin(p.dir) * p.speed * delta;
         p.mesh.rotation.y = -p.dir + Math.PI/2;
 
-        if(checkBuildingCollision(p.mesh.position, 0.4) || 
+        if(checkEntityCollision(p.mesh.position, 0.4, [p.mesh]) || 
            Math.abs(p.mesh.position.x) > P_LIMIT || Math.abs(p.mesh.position.z) > P_LIMIT) {
             p.mesh.position.copy(oldPos);
             p.dir += Math.PI * (0.5 + Math.random()); // Change direction
@@ -356,7 +401,7 @@ function updatePlayer(delta) {
         player.translateZ(speed * delta);
     }
 
-    if (checkBuildingCollision(player.position, 0.6)) {
+    if (checkEntityCollision(player.position, 0.6, [player])) {
         player.position.copy(oldPos);
     }
 
@@ -403,7 +448,7 @@ function updateCar(delta) {
 
     car.translateZ(carSpeed * delta);
 
-    if (checkBuildingCollision(car.position, 1.5)) {
+    if (checkEntityCollision(car.position, 1.5, [car])) {
         car.position.copy(oldPos);
         carSpeed *= -0.5; // Bounce back a bit
     }
