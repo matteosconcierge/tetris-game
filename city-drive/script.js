@@ -298,22 +298,22 @@ function checkEntityCollision(pos, radius, ignoreList = []) {
     for (let tc of trafficCars) {
         if (ignoreList.includes(tc.mesh)) continue;
         const dist = pos.distanceTo(tc.mesh.position);
-        if (dist < radius + 2) return true; // Car is roughly 4 units long
+        if (dist < radius + 2.5) return true; // Increased car radius
     }
 
     // Check Pedestrians
     for (let p of pedestrians) {
         if (ignoreList.includes(p.mesh)) continue;
         const dist = pos.distanceTo(p.mesh.position);
-        if (dist < radius + 0.5) return true;
+        if (dist < radius + 1.0) return true; // Increased pedestrian radius
     }
 
     // Check Player/Controlled Car
     if (!ignoreList.includes(player) && !isDriving) {
-        if (pos.distanceTo(player.position) < radius + 0.6) return true;
+        if (pos.distanceTo(player.position) < radius + 1.0) return true;
     }
     if (!ignoreList.includes(car)) {
-        if (pos.distanceTo(car.position) < radius + 2) return true;
+        if (pos.distanceTo(car.position) < radius + 2.5) return true;
     }
 
     return false;
@@ -342,14 +342,14 @@ function updateTraffic(delta) {
         let blocked = false;
         const rayPos = tc.mesh.position.clone();
         const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(tc.mesh.quaternion);
-        rayPos.add(forward.multiplyScalar(5)); // Check 5 units ahead
+        rayPos.add(forward.multiplyScalar(8)); // Check 8 units ahead (more buffer)
 
-        if (checkEntityCollision(rayPos, 1.5, [tc.mesh])) {
+        if (checkEntityCollision(rayPos, 3.0, [tc.mesh])) {
             blocked = true;
         }
 
         if (blocked) {
-            tc.speed = Math.max(0, tc.speed - 20 * delta); // Brake
+            tc.speed = 0; // Emergency brake (instant stop for testing/clarity)
         } else {
             tc.speed = Math.min(20, tc.speed + 10 * delta); // Accel to cruise
         }
