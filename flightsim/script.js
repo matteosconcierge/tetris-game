@@ -10,7 +10,7 @@ let accumulator = 0;
 const step = 1/60;
 
 // Scene Setup
-const scene = new THREE.Scene();
+const scene = new THREE.Scene(); window.scene = scene;
 scene.background = new THREE.Color(0x87ceeb);
 scene.fog = new THREE.Fog(0x87ceeb, 10, 500);
 
@@ -65,7 +65,7 @@ water.position.y = -5;
 scene.add(water);
 
 // Plane (Simplified Model)
-const plane = new THREE.Group();
+const plane = new THREE.Group(); window.plane = plane;
 
 // Fuselage
 const bodyGeom = new THREE.BoxGeometry(1, 1, 4);
@@ -92,11 +92,11 @@ scene.add(plane);
 
 // State
 const keys = {};
-let isCrashed = false;
+let isCrashed = false; window.gameStatus = { isCrashed: false, crashCount: 0, lastIsWater: null, explosionColors: [] };
 let explosionParticles = [];
 const crashOverlay = document.getElementById('crash-overlay');
 
-function resetGame() {
+function resetGame() { window.gameStatus.isCrashed = false; window.gameStatus.explosionColors = [];
     isCrashed = false;
     crashOverlay.style.display = 'none';
     plane.position.set(0, 50, 0);
@@ -226,25 +226,33 @@ function update() {
     updateUI();
 
     // Collision detection
-    const groundH = getGroundHeight(plane.position.x, plane.position.z);
-    if (plane.position.y < groundH + 1) {
-        crash();
+    if (!isCrashed) {
+        const groundH = getGroundHeight(plane.position.x, plane.position.z);
+        // Check ground or water (water is at -5)
+        if (plane.position.y < groundH + 1 || plane.position.y < -4.5) {
+            const isWater = plane.position.y < -4.0 && groundH < -4.0;
+            crash(isWater);
+        }
     }
 }
 
-function crash() {
-    isCrashed = true;
+function crash(isWater) {
+    isCrashed = true; window.gameStatus.isCrashed = true; window.gameStatus.crashCount++; window.gameStatus.lastIsWater = isWater;
     currentSpeed = 0;
     
     // Screen shake / Background flare
-    scene.background = new THREE.Color(0xff4400);
+    scene.background = new THREE.Color(isWater ? 0x0044ff : 0xff4400);
     
     // Create explosion particles
     const particleCount = 20;
     const pGeom = new THREE.BoxGeometry(0.5, 0.5, 0.5);
     for (let i = 0; i < particleCount; i++) {
+        const color = isWater ? 
+            (Math.random() > 0.5 ? 0xffffff : 0x44aaff) : 
+            (Math.random() > 0.5 ? 0xffaa00 : 0xff0000);
+            
         const pMat = new THREE.MeshPhongMaterial({ 
-            color: Math.random() > 0.5 ? 0xffaa00 : 0xff0000,
+            color: color,
             transparent: true,
             opacity: 1.0
         });
@@ -252,16 +260,17 @@ function crash() {
         p.position.copy(plane.position);
         p.userData.velocity = new THREE.Vector3(
             (Math.random() - 0.5) * 0.5,
-            Math.random() * 0.5,
+            Math.random() * (isWater ? 0.3 : 0.5),
             (Math.random() - 0.5) * 0.5
         );
-        explosionParticles.push(p);
+        explosionParticles.push(p); window.gameStatus.explosionColors.push(p.material.color.getHex());
         scene.add(p);
     }
 
     // Visual crash tilt
     plane.rotation.z += 0.5;
 
+    crashOverlay.querySelector('h1').textContent = isWater ? 'SPLASHED' : 'CRASHED';
     crashOverlay.style.display = 'flex';
     
     // Random 'crash' tilt
