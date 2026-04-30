@@ -48,8 +48,8 @@ function init() {
         }
     }
 
-    // Player (Walking mode)
-    const playerGeo = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
+    // Player (Walking mode) - Replaced CapsuleGeometry with BoxGeometry for compatibility with r128
+    const playerGeo = new THREE.BoxGeometry(1, 2, 0.5);
     const playerMat = new THREE.MeshStandardMaterial({ color: 0x0000ff });
     player = new THREE.Mesh(playerGeo, playerMat);
     player.position.set(0, 1, 5);
