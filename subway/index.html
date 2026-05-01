@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Station 402 - Tactical FPS</title>
+    <title>Station 402 - Tactical Masterpiece FPS</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         canvas { display: block; }
@@ -261,8 +261,8 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x000205);
-            scene.fog = new THREE.FogExp2(0x000205, 0.035);
+            scene.background = new THREE.Color(0x010101);
+            scene.fog = new THREE.FogExp2(0x010101, 0.035);
 
             camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
             
@@ -276,14 +276,14 @@
             document.body.appendChild(renderer.domElement);
 
             // Post-Processing
-            const renderScene = new RenderPass(scene, camera);
+            const renderPass = new RenderPass(scene, camera);
             bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.2;
-            bloomPass.strength = 1.4;
-            bloomPass.radius = 0.8;
+            bloomPass.threshold = 0.3;
+            bloomPass.strength = 1.8;
+            bloomPass.radius = 1.0;
 
             composer = new EffectComposer(renderer);
-            composer.addPass(renderScene);
+            composer.addPass(renderPass);
             composer.addPass(bloomPass);
 
             // Controls
@@ -302,27 +302,20 @@
                 });
             } else {
                 blocker.addEventListener('click', () => controls.lock());
-                controls.addEventListener('lock', () => {
-                    blocker.style.display = 'none';
-                });
-                controls.addEventListener('unlock', () => {
-                    blocker.style.display = 'flex';
-                });
+                controls.addEventListener('lock', () => { blocker.style.display = 'none'; });
+                controls.addEventListener('unlock', () => { blocker.style.display = 'flex'; });
             }
 
             scene.add(controls.getObject());
-            controls.getObject().position.set(-20, 4, 30);
+            controls.getObject().position.set(-25, 4, 30);
 
-            // Input
-            // Slider listener
+            // Input Slider
             const exposureSlider = document.getElementById('exposure-range');
             exposureSlider.addEventListener('input', (e) => {
                 renderer.toneMappingExposure = parseFloat(e.target.value);
             });
 
-            if (isTouchDevice) {
-                initTouchControls();
-            }
+            if (isTouchDevice) initTouchControls();
 
             const onKeyDown = (e) => {
                 switch(e.code) {
@@ -349,99 +342,195 @@
                 }
             });
 
-            // --- WORLD BUILDING ---
+            // --- DEEP SCENE CONSTRUCTION (RESTORED MASTERPIECE) ---
 
-            // Floor
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.05, metalness: 0.95 });
-            const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 100), floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+            // 1. Floor: Multi-Layered Wet Tiles
+            const floorGroup = new THREE.Group();
+            const floorGeo = new THREE.PlaneGeometry(400, 50);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.04, metalness: 0.9 });
+            const baseFloor = new THREE.Mesh(floorGeo, floorMat);
+            baseFloor.rotation.x = -Math.PI / 2;
+            baseFloor.receiveShadow = true;
+            floorGroup.add(baseFloor);
 
-            // Walls & Pillars (Collidables)
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.8 });
-            const backWall = new THREE.Mesh(new THREE.BoxGeometry(400, 20, 5), wallMat);
-            backWall.position.set(0, 10, -15);
+            const puddleMat = new THREE.MeshStandardMaterial({ color: 0x010101, roughness: 0.0, metalness: 1.0, transparent: true, opacity: 0.7 });
+            for(let i=0; i<15; i++) {
+                const p = new THREE.Mesh(new THREE.CircleGeometry(Math.random()*4+1, 32), puddleMat);
+                p.rotation.x = -Math.PI / 2;
+                p.position.set(Math.random()*200-100, 0.01, Math.random()*20-5);
+                p.scale.set(1.5, 1, 1);
+                floorGroup.add(p);
+            }
+
+            const warningStrip = new THREE.Mesh(new THREE.PlaneGeometry(400, 1.2), new THREE.MeshStandardMaterial({ color: 0xffbb00, roughness: 0.2, metalness: 0.5 }));
+            warningStrip.rotation.x = -Math.PI / 2;
+            warningStrip.position.set(0, 0.02, 10);
+            floorGroup.add(warningStrip);
+            scene.add(floorGroup);
+
+            // 2. Track Bed & Rails
+            const trackGeo = new THREE.PlaneGeometry(400, 25);
+            const trackMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1.0 });
+            const tracks = new THREE.Mesh(trackGeo, trackMat);
+            tracks.rotation.x = -Math.PI / 2;
+            tracks.position.set(0, -1.0, 25);
+            scene.add(tracks);
+
+            const railMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 1.0, roughness: 0.1 });
+            for(let offset of [18, 22, 28, 32]) {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(400, 0.2, 0.4), railMat);
+                rail.position.set(0, -0.9, offset);
+                scene.add(rail);
+            }
+
+            // 3. Walls: Brutalist Granite
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8, metalness: 0.2 });
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(400, 20, 2), wallMat);
+            backWall.position.set(0, 10, -10);
+            backWall.receiveShadow = true;
             scene.add(backWall);
             collidables.push(backWall);
 
-            for (let i = -150; i <= 150; i += 40) {
-                const pillar = new THREE.Mesh(new THREE.BoxGeometry(3, 20, 3), wallMat);
-                pillar.position.set(i, 10, 5);
-                scene.add(pillar);
-                collidables.push(pillar);
+            for(let i=-200; i<200; i+=20) {
+                const groove = new THREE.Mesh(new THREE.BoxGeometry(0.1, 20, 2.1), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                groove.position.set(i, 10, -10);
+                scene.add(groove);
             }
 
-            // Ceiling & Subsystem
-            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(400, 100), new THREE.MeshStandardMaterial({ color: 0x020202 }));
+            // 4. Pillars & Beams
+            const steelMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.9, roughness: 0.4 });
+            for (let i = -160; i <= 160; i += 40) {
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(2, 15, 2), steelMat);
+                pillar.position.set(i, 7.5, 7);
+                pillar.castShadow = true;
+                scene.add(pillar);
+                collidables.push(pillar);
+
+                const crossBeam = new THREE.Mesh(new THREE.BoxGeometry(42, 1, 1.5), steelMat);
+                crossBeam.position.set(i + 20, 14.5, 7);
+                scene.add(crossBeam);
+            }
+
+            // 5. Ceiling
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(400, 60), new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
             ceiling.rotation.x = Math.PI / 2;
-            ceiling.position.y = 20;
+            ceiling.position.set(0, 15, 10);
             scene.add(ceiling);
 
-            // Fans
-            for (let i = -120; i <= 120; i += 60) {
+            // Cables
+            for(let i=0; i<8; i++) {
+                const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 400, 8), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                cable.rotation.z = Math.PI / 2;
+                cable.position.set(0, 14.8, -8 + i*0.6);
+                scene.add(cable);
+            }
+
+            // 6. AD Billboards (Procedural)
+            for (let i = -140; i <= 140; i += 70) {
+                const color = i % 140 === 0 ? 0x00ffff : 0xff3300;
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#111'; ctx.fillRect(0,0,512,256);
+                ctx.strokeStyle = color === 0x00ffff ? '#00ffff' : '#ff3300';
+                ctx.lineWidth = 15; ctx.strokeRect(10,10,492,236);
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.font = 'bold 85px Arial'; ctx.textAlign = 'center';
+                ctx.fillText(i % 140 === 0 ? 'STATUS: OK' : 'OFF LIMITS', 256, 110);
+                ctx.font = '24px monospace'; ctx.fillText('SUBWAY SECTOR 402 - SCANNING', 256, 175);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const screenMat = new THREE.MeshStandardMaterial({ map: texture, emissiveMap: texture, emissive: color, emissiveIntensity: 1.0 });
+                const adMesh = new THREE.Mesh(new THREE.BoxGeometry(14, 8, 0.5), screenMat);
+                adMesh.position.set(i, 7, -9);
+                scene.add(adMesh);
+                const light = new THREE.PointLight(color, 25, 20);
+                light.position.set(i, 7, -7);
+                scene.add(light);
+                adScreens.push({ mesh: adMesh, light, phase: Math.random() * Math.PI });
+            }
+
+            // 7. Dripping Water
+            dripArray = [];
+            for(let i=0; i<8; i++) {
+                const drip = new THREE.Mesh(new THREE.SphereGeometry(0.05, 4, 4), new THREE.MeshStandardMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.6 }));
+                const x = Math.random() * 200 - 100;
+                drip.position.set(x, 14, -9);
+                scene.add(drip);
+                dripArray.push({ mesh: drip, speed: 0.12 + Math.random()*0.1, startX: x });
+            }
+
+            // 8. LED Display
+            const ledCanvas = document.createElement('canvas');
+            ledCanvas.width = 1024; ledCanvas.height = 128;
+            const ledCtx = ledCanvas.getContext('2d');
+            const ledTexture = new THREE.CanvasTexture(ledCanvas);
+            const ledDisplay = new THREE.Mesh(new THREE.BoxGeometry(12, 1.2, 0.4), new THREE.MeshStandardMaterial({ map: ledTexture, emissiveMap: ledTexture, emissive: 0xff6600, emissiveIntensity: 2 }));
+            ledDisplay.position.set(0, 11.5, 8.2);
+            scene.add(ledDisplay);
+            ledData = { canvas: ledCanvas, ctx: ledCtx, texture: ledTexture, offset: 0 };
+
+            // 9. Industrial Ducts & Rotating Fans
+            const ductMat = new THREE.MeshStandardMaterial({ color: 0x080808, metalness: 0.9, roughness: 0.3 });
+            for(let i = -120; i <= 120; i += 60) {
+                const duct = new THREE.Mesh(new THREE.BoxGeometry(5, 2.5, 40), ductMat);
+                duct.position.set(i, 13.5, 15);
+                scene.add(duct);
                 const fanGroup = new THREE.Group();
-                for(let b=0; b<4; b++) {
-                    const blade = new THREE.Mesh(new THREE.BoxGeometry(6, 0.1, 1), wallMat);
+                for(let b = 0; b < 4; b++) {
+                    const blade = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 0.6), ductMat);
                     blade.rotation.y = (b * Math.PI) / 2;
                     fanGroup.add(blade);
                 }
-                fanGroup.position.set(i, 19, 0);
+                fanGroup.position.set(i + 3, 13, 6);
                 scene.add(fanGroup);
                 fans.push(fanGroup);
             }
 
-            // Billboards
-            for (let i = -100; i <= 100; i += 50) {
-                const color = i % 100 === 0 ? 0x00ffff : 0xff3300;
-                const canvas = document.createElement('canvas');
-                canvas.width = 512; canvas.height = 256;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#000'; ctx.fillRect(0,0,512,256);
-                ctx.strokeStyle = i % 100 === 0 ? '#00ffff' : '#ff3300';
-                ctx.lineWidth = 20; ctx.strokeRect(0,0,512,256);
-                ctx.font = 'bold 120px Arial'; ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = 'center';
-                ctx.fillText(i % 100 === 0 ? 'ACTIVE' : 'WATCH', 256, 160);
-                
-                const tex = new THREE.CanvasTexture(canvas);
-                const ad = new THREE.Mesh(new THREE.BoxGeometry(15, 8, 0.5), new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: color, emissiveIntensity: 2 }));
-                ad.position.set(i, 8, -12.4);
-                scene.add(ad);
-                adScreens.push({ mesh: ad, phase: Math.random()*Math.PI });
+            // 10. Train car
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 1.0, roughness: 0.1 });
+            for(let i=0; i<3; i++) {
+                const car = new THREE.Mesh(new THREE.BoxGeometry(60, 9, 8.5), bodyMat);
+                car.position.set(i*64 - 64, 5, 25);
+                scene.add(car);
             }
 
-            // --- ARMORY ---
+            // --- ARMORY & NPC (FPS LOGIC) ---
+
             gun = new THREE.Group();
             const gBody = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 4), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 1 }));
             gun.add(gBody);
             const gBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2 }));
             gBarrel.rotation.x = Math.PI/2; gBarrel.position.z = -2;
             gun.add(gBarrel);
-            
             muzzleFlash = new THREE.PointLight(0x00ffff, 0, 15);
             muzzleFlash.position.z = -4;
             gun.add(muzzleFlash);
-            
             camera.add(gun);
             gun.position.set(1, -1.2, -2.5);
 
-            // --- ADVERSARIES ---
             for(let i=0; i<6; i++) spawnDrone();
 
-            // Industry Particles
-            const dGeo = new THREE.BufferGeometry();
-            const dPos = [];
-            for(let i=0; i<4000; i++) dPos.push(Math.random()*400-200, Math.random()*20, Math.random()*60-30);
-            dGeo.setAttribute('position', new THREE.Float32BufferAttribute(dPos, 3));
-            scene.add(new THREE.Points(dGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.1 })));
-
-            // Lights
-            scene.add(new THREE.AmbientLight(0xffffff, 0.1));
-            for(let i=-120; i<=120; i+=60) {
-                const pl = new THREE.PointLight(0xffffff, 100, 80);
-                pl.position.set(i, 18, -5);
+            // Flickering Neons
+            for (let i = -120; i <= 120; i += 40) {
+                const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 18, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 10 }));
+                tube.rotation.z = Math.PI / 2;
+                tube.position.set(i, 14.5, 3);
+                scene.add(tube);
+                const pl = new THREE.PointLight(0xffffff, 90, 70);
+                pl.position.set(i, 13, 3);
+                pl.castShadow = true;
                 scene.add(pl);
+                mainLights.push({ light: pl, tube: tube });
             }
+
+            // Atmosphere: dust
+            const dGeo = new THREE.BufferGeometry();
+            const dPos = new Float32Array(5000 * 3);
+            for(let i=0; i<5000*3; i+=3) { dPos[i] = Math.random()*200-100; dPos[i+1] = Math.random()*20; dPos[i+2] = Math.random()*60-10; }
+            dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+            particles = new THREE.Points(dGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.2 }));
+            scene.add(particles);
 
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
@@ -456,22 +545,10 @@
             const knob = document.querySelector('.joystick-knob');
             const fireBtn = document.getElementById('fire-button');
             const lookArea = document.getElementById('look-area');
-            
-            let joyActive = false;
-            let joyTouchId = null;
-            let lookTouchId = null;
-            let lastLookX, lastLookY;
+            let joyActive = false, joyTouchId = null, lookTouchId = null, lastLookX, lastLookY;
 
-            joystick.addEventListener('touchstart', (e) => {
-                joyActive = true;
-                joyTouchId = e.changedTouches[0].identifier;
-            }, { passive: false });
-
-            fireBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                shoot();
-            }, { passive: false });
-
+            joystick.addEventListener('touchstart', (e) => { joyActive = true; joyTouchId = e.changedTouches[0].identifier; }, { passive: false });
+            fireBtn.addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); }, { passive: false });
             lookArea.addEventListener('touchstart', (e) => {
                 if (e.target.closest('#lighting-ctrl')) return;
                 if (lookTouchId !== null) return;
@@ -479,102 +556,60 @@
                 lastLookX = e.changedTouches[0].pageX;
                 lastLookY = e.changedTouches[0].pageY;
             });
-
             window.addEventListener('touchmove', (e) => {
                 for (let t of e.changedTouches) {
                     if (joyActive && t.identifier === joyTouchId) {
                         const rect = joystick.getBoundingClientRect();
-                        const centerX = rect.left + rect.width / 2;
-                        const centerY = rect.top + rect.height / 2;
-                        
-                        let dx = t.pageX - centerX;
-                        let dy = t.pageY - centerY;
-                        const distance = Math.sqrt(dx*dx + dy*dy);
-                        const maxRadius = rect.width / 2;
-
-                        if (distance > maxRadius) {
-                            dx *= maxRadius / distance;
-                            dy *= maxRadius / distance;
-                        }
-
+                        const centerX = rect.left + rect.width / 2, centerY = rect.top + rect.height / 2;
+                        let dx = t.pageX - centerX, dy = t.pageY - centerY;
+                        const distance = Math.sqrt(dx*dx + dy*dy), maxRadius = rect.width / 2;
+                        if (distance > maxRadius) { dx *= maxRadius / distance; dy *= maxRadius / distance; }
                         knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                        
-                        const normX = dx / maxRadius;
-                        const normY = dy / maxRadius;
-                        
-                        moveForward = normY < -0.2;
-                        moveBackward = normY > 0.2;
-                        moveLeft = normX < -0.2;
-                        moveRight = normX > 0.2;
+                        const normX = dx / maxRadius, normY = dy / maxRadius;
+                        moveForward = normY < -0.2; moveBackward = normY > 0.2; moveLeft = normX < -0.2; moveRight = normX > 0.2;
                     }
-
                     if (t.identifier === lookTouchId) {
-                        const dx = t.pageX - lastLookX;
-                        const dy = t.pageY - lastLookY;
-                        lastLookX = t.pageX;
-                        lastLookY = t.pageY;
-
+                        const dx = t.pageX - lastLookX, dy = t.pageY - lastLookY;
+                        lastLookX = t.pageX; lastLookY = t.pageY;
                         const sensitivity = 0.005;
-                        const yawObject = controls.getObject();
-                        const pitchObject = camera;
-
-                        yawObject.rotation.y -= dx * sensitivity;
-                        pitchObject.rotation.x -= dy * sensitivity;
-                        pitchObject.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObject.rotation.x));
+                        controls.getObject().rotation.y -= dx * sensitivity;
+                        camera.rotation.x -= dy * sensitivity;
+                        camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
                     }
                 }
             }, { passive: false });
-
             window.addEventListener('touchend', (e) => {
                 for (let t of e.changedTouches) {
-                    if (t.identifier === joyTouchId) {
-                        joyActive = false;
-                        joyTouchId = null;
-                        knob.style.transform = `translate(-50%, -50%)`;
-                        moveForward = moveBackward = moveLeft = moveRight = false;
-                    }
-                    if (t.identifier === lookTouchId) {
-                        lookTouchId = null;
-                    }
+                    if (t.identifier === joyTouchId) { joyActive = false; joyTouchId = null; knob.style.transform = `translate(-50%, -50%)`; moveForward = moveBackward = moveLeft = moveRight = false; }
+                    if (t.identifier === lookTouchId) lookTouchId = null;
                 }
             });
         }
 
         function droneShoot(drone) {
-            const geo = new THREE.SphereGeometry(0.2);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
-            const mesh = new THREE.Mesh(geo, mat);
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshBasicMaterial({ color: 0xff3300 }));
             mesh.position.copy(drone.position);
-            
-            const vel = new THREE.Vector3().subVectors(camera.position, drone.position).normalize().multiplyScalar(0.8);
+            const vel = new THREE.Vector3().subVectors(camera.position, drone.position).normalize().multiplyScalar(1.0);
             enemyProjectiles.push({ mesh, vel });
             scene.add(mesh);
         }
 
         function takeDamage(amt) {
             playDamageSound();
-            health -= amt;
-            if(health < 0) health = 0;
+            health -= amt; if(health < 0) health = 0;
             document.getElementById('health-val').innerText = health;
-            
-            // Visual feedback
             renderer.setClearColor(0xff0000, 0.2);
-            setTimeout(() => renderer.setClearColor(0x000205, 1), 50);
-
+            setTimeout(() => renderer.setClearColor(0x010101, 1), 50);
             if(health <= 0) gameOver();
         }
 
         function gameOver() {
             controls.unlock();
             const msg = document.querySelector('.msg');
-            msg.innerHTML = "SYSTEM COMPROMISED";
-            msg.style.color = "#ff3300";
+            msg.innerHTML = "SYSTEM COMPROMISED"; msg.style.color = "#ff3300";
             document.querySelector('.sub-msg').innerHTML = `DRONES OVERRAN THE STATION.<br>${isTouchDevice ? 'TAP' : 'CLICK'} TO REBOOT`;
             document.getElementById('mobile-controls').style.display = 'none';
-            
-            // Reset state
-            health = 100;
-            kills = 0;
+            health = 100; kills = 0;
             document.getElementById('health-val').innerText = health;
             document.getElementById('kills-val').innerText = kills;
             enemyProjectiles.forEach(p => scene.remove(p.mesh));
@@ -582,52 +617,35 @@
         }
 
         function spawnDrone() {
-            const drone = new THREE.Group();
-            drone.userData.isDrone = true;
+            const drone = new THREE.Group(); drone.userData.isDrone = true;
             const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 1 }));
             drone.add(body);
             const eye = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 5 }));
-            eye.position.z = 0.8;
-            drone.add(eye);
-            
-            drone.position.set(Math.random()*200-100, 4 + Math.random()*10, Math.random()*40-20);
+            eye.position.z = 0.8; drone.add(eye);
+            drone.position.set(Math.random()*200-100, 4 + Math.random()*8, Math.random()*20 - 5);
             scene.add(drone);
             drones.push({ mesh: drone, noise: Math.random()*Math.PI*2 });
         }
 
         function shoot() {
-            playShotSound();
-            muzzleFlash.intensity = 150;
-            setTimeout(() => muzzleFlash.intensity = 0, 50);
-            
-            // Recoil
+            playShotSound(); muzzleFlash.intensity = 150; setTimeout(() => muzzleFlash.intensity = 0, 50);
             gun.position.z += 0.5;
-            
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
             const intersects = raycaster.intersectObjects(scene.children, true);
-            
             if(intersects.length > 0) {
-                let hit = intersects[0];
-                let obj = hit.object;
+                let hit = intersects[0], obj = hit.object;
                 while(obj.parent && !obj.userData.isDrone) obj = obj.parent;
-                
                 if(obj.userData.isDrone) {
                     const idx = drones.findIndex(d => d.mesh === obj);
                     if(idx !== -1) {
-                        explode(obj.position);
-                        scene.remove(obj);
-                        drones.splice(idx, 1);
-                        kills++;
-                        document.getElementById('kills-val').innerText = kills;
+                        explode(obj.position); scene.remove(obj); drones.splice(idx, 1);
+                        kills++; document.getElementById('kills-val').innerText = kills;
                         setTimeout(spawnDrone, 1500);
                     }
                 } else {
-                    // Impact
                     const spk = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 10 }));
-                    spk.position.copy(hit.point);
-                    scene.add(spk);
-                    setTimeout(() => scene.remove(spk), 150);
+                    spk.position.copy(hit.point); scene.add(spk); setTimeout(() => scene.remove(spk), 150);
                 }
             }
         }
@@ -649,93 +667,67 @@
             const blocker = document.getElementById('blocker');
 
             if ((controls.isLocked || (isTouchDevice && blocker.style.display === 'none')) && health > 0) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 80.0 * delta; // Heavy Gravity
-
+                velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta;
+                velocity.y -= 9.8 * 80 * delta;
                 direction.z = Number(moveForward) - Number(moveBackward);
                 direction.x = Number(moveRight) - Number(moveLeft);
                 direction.normalize();
-
-                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
-
-                // COLLISION DETECTION (Simple)
+                if (moveForward || moveBackward) velocity.z -= direction.z * 400 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 400 * delta;
                 const prevPos = controls.getObject().position.clone();
-                
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
-                
-                let playerPos = controls.getObject().position;
-                let hitObject = false;
-                
+                let playerPos = controls.getObject().position, hitObject = false;
                 collidables.forEach(c => {
                     const bounds = new THREE.Box3().setFromObject(c);
-                    const playerBox = new THREE.Box3().setFromCenterAndSize(
-                        new THREE.Vector3(playerPos.x, 10, playerPos.z), 
-                        new THREE.Vector3(2, 20, 2)
-                    );
+                    const playerBox = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(playerPos.x, 7, playerPos.z), new THREE.Vector3(2.5, 14, 2.5));
                     if(bounds.intersectsBox(playerBox)) hitObject = true;
                 });
-                
-                if(hitObject) {
-                    controls.getObject().position.copy(prevPos);
-                    velocity.x = 0;
-                    velocity.z = 0;
-                }
-                
+                if(hitObject) { controls.getObject().position.copy(prevPos); velocity.x = 0; velocity.z = 0; }
                 controls.getObject().position.y += (velocity.y * delta);
-                if (controls.getObject().position.y < 4) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = 4;
-                    canJump = true;
-                }
-
-                // Smooth recoil recovery
+                if (controls.getObject().position.y < 4) { velocity.y = 0; controls.getObject().position.y = 4; canJump = true; }
                 gun.position.z += ( -2.5 - gun.position.z ) * 0.1;
                 gun.position.y = -1.2 + Math.sin(time*4) * 0.01 * (velocity.length()/50);
             }
 
             // Animate Assets
-            fans.forEach(f => f.rotation.y += 0.1);
+            fans.forEach(f => f.rotation.z += 0.05);
             drones.forEach(d => {
                 d.mesh.position.y += Math.sin(time * 2 + d.noise) * 0.02;
                 d.mesh.lookAt(camera.position);
-                
-                // Random shooting
                 if(Math.random() < 0.005) droneShoot(d.mesh);
             });
-            
-            // Projectiles
             enemyProjectiles.forEach((p, i) => {
                 p.mesh.position.add(p.vel);
-                if(p.mesh.position.distanceTo(camera.position) < 2) {
-                    takeDamage(10);
-                    scene.remove(p.mesh);
-                    enemyProjectiles.splice(i, 1);
-                }
-                if(p.mesh.position.length() > 500) {
-                    scene.remove(p.mesh);
-                    enemyProjectiles.splice(i, 1);
-                }
+                if(p.mesh.position.distanceTo(camera.position) < 2) { takeDamage(10); scene.remove(p.mesh); enemyProjectiles.splice(i, 1); }
+                else if(p.mesh.position.length() > 500) { scene.remove(p.mesh); enemyProjectiles.splice(i, 1); }
             });
-
             adScreens.forEach(ad => {
-                ad.mesh.material.emissiveIntensity = 1.0 + Math.sin(time * 0.8 + ad.phase) * 0.5;
+                const pulse = (Math.sin(time * 0.5 + ad.phase) + 1) * 0.5;
+                ad.mesh.material.emissiveIntensity = 0.3 + pulse * 0.7;
+                ad.light.intensity = (20 + pulse * 20) * (renderer.toneMappingExposure || 1);
             });
-            particles.forEach((p, i) => {
-                p.mesh.position.add(p.vel);
-                p.life -= 0.02;
-                p.mesh.scale.setScalar(p.life);
-                if(p.life <= 0) {
-                    scene.remove(p.mesh);
-                    particles.splice(i, 1);
+            dripArray.forEach(d => {
+                d.mesh.position.y -= d.speed;
+                if (d.mesh.position.y < 0.05) { d.mesh.position.y = 14; d.mesh.position.x = d.startX + (Math.random() * 0.4 - 0.2); }
+            });
+            if (ledData) {
+                const { canvas, ctx, texture } = ledData;
+                ledData.offset -= 2; if (ledData.offset < -2400) ledData.offset = canvas.width;
+                ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ff6600'; ctx.font = 'bold 70px Courier New';
+                ctx.fillText('STATION 402 - DELAYED - ATTACK IMMINENT - ', ledData.offset, 90);
+                texture.needsUpdate = true;
+            }
+            mainLights.forEach(l => {
+                if(Math.random() > 0.995) {
+                    const oL = l.light.intensity, oE = l.tube.material.emissiveIntensity;
+                    l.light.intensity *= 0.1; l.tube.material.emissiveIntensity *= 0.1;
+                    setTimeout(() => { l.light.intensity = oL; l.tube.material.emissiveIntensity = oE; }, 50 + Math.random()*150);
                 }
             });
-
-            const d = new Date();
-            document.getElementById('clock-ui').innerText = d.toLocaleTimeString();
-
+            const clockD = new Date();
+            document.getElementById('clock-ui').innerText = clockD.toLocaleTimeString();
             composer.render();
         }
     </script>
