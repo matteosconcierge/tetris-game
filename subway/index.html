@@ -74,6 +74,61 @@
             pointer-events: none;
             opacity: 0.7;
         }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            display: none;
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 150;
+        }
+        .joystick-container {
+            position: absolute;
+            bottom: 40px; left: 40px;
+            width: 140px; height: 140px;
+            background: rgba(0, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        .joystick-knob {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 60px; height: 60px;
+            transform: translate(-50%, -50%);
+            background: cyan;
+            border-radius: 50%;
+            box-shadow: 0 0 20px cyan;
+            opacity: 0.6;
+        }
+        #fire-button {
+            position: absolute;
+            bottom: 60px; right: 60px;
+            width: 110px; height: 110px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 4px solid cyan;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: cyan;
+            font-weight: bold;
+            font-size: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: auto;
+            user-select: none;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+            touch-action: none;
+            text-shadow: 0 0 10px cyan;
+        }
+        #look-area {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: auto;
+            touch-action: none;
+        }
     </style>
 </head>
 <body>
@@ -83,6 +138,15 @@
             <div class="sub-msg">CLICK TO INITIALIZE FPS INTERFACE<br>(WASD: MOVE | SPACE: JUMP | MOUSE: AIM | CLICK: FIRE)</div>
         </div>
     </div>
+
+    <div id="mobile-controls">
+        <div id="look-area"></div>
+        <div class="joystick-container">
+            <div class="joystick-knob"></div>
+        </div>
+        <div id="fire-button">FIRE</div>
+    </div>
+
     <div id="crosshair"></div>
     <div id="stats-hud">
         DECOMMISSIONED: <span id="kills-val">0</span> | VITALITY: <span id="health-val">100</span>%
@@ -114,6 +178,8 @@
         let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
         let kills = 0, health = 100, gun, muzzleFlash, dripArray, ledData;
         const clock = new THREE.Clock();
+
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
         init();
         animate();
@@ -194,13 +260,35 @@
             // Controls
             controls = new PointerLockControls(camera, document.body);
             const blocker = document.getElementById('blocker');
-            blocker.addEventListener('click', () => controls.lock());
-            controls.addEventListener('lock', () => blocker.style.display = 'none');
-            controls.addEventListener('unlock', () => blocker.style.display = 'flex');
+            const mobileControls = document.getElementById('mobile-controls');
+            const subMsg = blocker.querySelector('.sub-msg');
+
+            if (isTouchDevice) {
+                subMsg.innerHTML = "TAP TO INITIALIZE FPS INTERFACE<br>(JOYSTICK: MOVE | SWIPE: LOOK | 'FIRE' BUTTON)";
+                blocker.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    blocker.style.display = 'none';
+                    mobileControls.style.display = 'block';
+                    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                });
+            } else {
+                blocker.addEventListener('click', () => controls.lock());
+                controls.addEventListener('lock', () => {
+                    blocker.style.display = 'none';
+                });
+                controls.addEventListener('unlock', () => {
+                    blocker.style.display = 'flex';
+                });
+            }
+
             scene.add(controls.getObject());
             controls.getObject().position.set(-20, 4, 30);
 
             // Input
+            if (isTouchDevice) {
+                initTouchControls();
+            }
+
             const onKeyDown = (e) => {
                 switch(e.code) {
                     case 'KeyW': moveForward = true; break;
@@ -220,7 +308,11 @@
             };
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
-            window.addEventListener('mousedown', () => { if(controls.isLocked) shoot(); });
+            window.addEventListener('mousedown', () => { 
+                if(controls.isLocked || (isTouchDevice && blocker.style.display === 'none')) {
+                    if (!isTouchDevice) shoot(); 
+                }
+            });
 
             // --- WORLD BUILDING ---
 
@@ -324,6 +416,94 @@
             });
         }
 
+        function initTouchControls() {
+            const joystick = document.querySelector('.joystick-container');
+            const knob = document.querySelector('.joystick-knob');
+            const fireBtn = document.getElementById('fire-button');
+            const lookArea = document.getElementById('look-area');
+            
+            let joyActive = false;
+            let joyTouchId = null;
+            let lookTouchId = null;
+            let lastLookX, lastLookY;
+
+            joystick.addEventListener('touchstart', (e) => {
+                joyActive = true;
+                joyTouchId = e.changedTouches[0].identifier;
+            }, { passive: false });
+
+            fireBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                shoot();
+            }, { passive: false });
+
+            lookArea.addEventListener('touchstart', (e) => {
+                if (lookTouchId !== null) return;
+                lookTouchId = e.changedTouches[0].identifier;
+                lastLookX = e.changedTouches[0].pageX;
+                lastLookY = e.changedTouches[0].pageY;
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                for (let t of e.changedTouches) {
+                    if (joyActive && t.identifier === joyTouchId) {
+                        const rect = joystick.getBoundingClientRect();
+                        const centerX = rect.left + rect.width / 2;
+                        const centerY = rect.top + rect.height / 2;
+                        
+                        let dx = t.pageX - centerX;
+                        let dy = t.pageY - centerY;
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        const maxRadius = rect.width / 2;
+
+                        if (distance > maxRadius) {
+                            dx *= maxRadius / distance;
+                            dy *= maxRadius / distance;
+                        }
+
+                        knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                        
+                        const normX = dx / maxRadius;
+                        const normY = dy / maxRadius;
+                        
+                        moveForward = normY < -0.2;
+                        moveBackward = normY > 0.2;
+                        moveLeft = normX < -0.2;
+                        moveRight = normX > 0.2;
+                    }
+
+                    if (t.identifier === lookTouchId) {
+                        const dx = t.pageX - lastLookX;
+                        const dy = t.pageY - lastLookY;
+                        lastLookX = t.pageX;
+                        lastLookY = t.pageY;
+
+                        const sensitivity = 0.005;
+                        const yawObject = controls.getObject();
+                        const pitchObject = camera;
+
+                        yawObject.rotation.y -= dx * sensitivity;
+                        pitchObject.rotation.x -= dy * sensitivity;
+                        pitchObject.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObject.rotation.x));
+                    }
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchend', (e) => {
+                for (let t of e.changedTouches) {
+                    if (t.identifier === joyTouchId) {
+                        joyActive = false;
+                        joyTouchId = null;
+                        knob.style.transform = `translate(-50%, -50%)`;
+                        moveForward = moveBackward = moveLeft = moveRight = false;
+                    }
+                    if (t.identifier === lookTouchId) {
+                        lookTouchId = null;
+                    }
+                }
+            });
+        }
+
         function droneShoot(drone) {
             const geo = new THREE.SphereGeometry(0.2);
             const mat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
@@ -353,7 +533,8 @@
             const msg = document.querySelector('.msg');
             msg.innerHTML = "SYSTEM COMPROMISED";
             msg.style.color = "#ff3300";
-            document.querySelector('.sub-msg').innerHTML = "DRONES OVERRAN THE STATION.<br>CLICK TO REBOOT";
+            document.querySelector('.sub-msg').innerHTML = `DRONES OVERRAN THE STATION.<br>${isTouchDevice ? 'TAP' : 'CLICK'} TO REBOOT`;
+            document.getElementById('mobile-controls').style.display = 'none';
             
             // Reset state
             health = 100;
@@ -429,8 +610,9 @@
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
             const time = clock.getElapsedTime();
+            const blocker = document.getElementById('blocker');
 
-            if (controls.isLocked && health > 0) {
+            if ((controls.isLocked || (isTouchDevice && blocker.style.display === 'none')) && health > 0) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
                 velocity.y -= 9.8 * 80.0 * delta; // Heavy Gravity
