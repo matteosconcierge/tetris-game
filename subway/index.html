@@ -395,6 +395,38 @@
             staircase.rotation.y = -0.2;
             scene.add(staircase);
 
+            // Abandoned Luggage (Suitcases)
+            const bagMat = new THREE.MeshStandardMaterial({ color: 0x331100, roughness: 0.8 });
+            for(let i=0; i<8; i++) {
+                const bag = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 0.5), bagMat);
+                bag.add(body);
+                const handle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.1), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+                handle.position.y = 0.55;
+                bag.add(handle);
+                
+                bag.position.set(Math.random()*160-80, 0.5, Math.random()*15-5);
+                bag.rotation.y = Math.random() * Math.PI;
+                scene.add(bag);
+            }
+
+            // Old Newspapers (Scattered planes)
+            const newsMat = new THREE.MeshStandardMaterial({ color: 0xddddcc, roughness: 1.0, side: THREE.DoubleSide });
+            for(let i=0; i<15; i++) {
+                const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.6), newsMat);
+                paper.rotation.x = -Math.PI / 2;
+                paper.rotation.z = Math.random() * Math.PI;
+                paper.position.set(Math.random()*180-90, 0.04, Math.random()*20-5);
+                scene.add(paper);
+            }
+
+            // Emergency Fire Extinguisher Points
+            for(let i=-100; i<=100; i+=100) {
+                const extinguisher = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 1), new THREE.MeshStandardMaterial({ color: 0xaa0000, emissive: 0xaa0000, emissiveIntensity: 0.5 }));
+                extinguisher.position.set(i + 5, 2.5, -9.5);
+                scene.add(extinguisher);
+            }
+
             // Security Cameras (Wall-mounted)
             for(let i=-180; i<=180; i+=60) {
                 const camGroup = new THREE.Group();
