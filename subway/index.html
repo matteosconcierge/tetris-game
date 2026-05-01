@@ -90,6 +90,7 @@
         let neons = [];
         let clocks = [];
         let ledSign;
+        let vendingMachines = [];
 
         init();
         animate();
@@ -393,6 +394,58 @@
             staircase.rotation.y = -0.2;
             scene.add(staircase);
 
+            // Vending Machines (Cyber-glow)
+            for(let i=-60; i<=60; i+=120) {
+                const machineGroup = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.BoxGeometry(4, 8.5, 3), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 }));
+                machineGroup.add(body);
+                
+                // Glowing panel
+                const panel = new THREE.Mesh(new THREE.PlaneGeometry(3, 7.5), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00ffcc, emissiveIntensity: 2 }));
+                panel.position.set(0, 0, 1.51);
+                machineGroup.add(panel);
+
+                const light = new THREE.PointLight(0x00ffcc, 100, 10);
+                light.position.set(0, 0, 3);
+                machineGroup.add(light);
+
+                machineGroup.position.set(i + 20, 4.25, -8.5);
+                scene.add(machineGroup);
+                vendingMachines.push({ panel, light, phase: Math.random() * Math.PI });
+            }
+
+            // Staff Only Doors
+            const doorMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 0.9, roughness: 0.5 });
+            for(let i=-130; i<=130; i+=260) {
+                const door = new THREE.Mesh(new THREE.BoxGeometry(4, 9, 0.2), doorMat);
+                door.position.set(i, 4.5, -9.9);
+                scene.add(door);
+                
+                // Red keypad light
+                const keypad = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.1), new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 5 }));
+                keypad.position.set(i + 1.5, 5, -9.8);
+                scene.add(keypad);
+            }
+
+            // Industrial Wiring Hangars
+            for(let i=-180; i<=180; i+=20) {
+                const cableGroup = new THREE.Group();
+                for(let c=0; c<3; c++) {
+                    const curve = new THREE.CubicBezierCurve3(
+                        new THREE.Vector3(-10, 11 + c*0.2, 0),
+                        new THREE.Vector3(-5, 9 + c*0.2, 2),
+                        new THREE.Vector3(5, 9 + c*0.2, -2),
+                        new THREE.Vector3(10, 11 + c*0.2, 0)
+                    );
+                    const points = curve.getPoints(20);
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x000000 }));
+                    cableGroup.add(line);
+                }
+                cableGroup.position.set(i, 0, 0);
+                scene.add(cableGroup);
+            }
+
             // --- UI LOGIC ---
             const exposureSlider = document.getElementById('exposure');
             exposureSlider.addEventListener('input', (e) => {
@@ -431,6 +484,13 @@
             clocks.forEach(face => {
                 const pulse = (Math.sin(time * 2) + 1) * 0.5;
                 face.material.emissiveIntensity = 2 + pulse * 6;
+            });
+            
+            // Animate Vending Machines
+            vendingMachines.forEach(v => {
+                const p = (Math.sin(time * 0.5 + v.phase) + 1) * 0.5;
+                v.panel.material.emissiveIntensity = 1 + p * 3;
+                v.light.intensity = 50 + p * 100;
             });
             
             // Animate LED Sign
