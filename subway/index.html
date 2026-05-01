@@ -292,9 +292,16 @@
                 const back = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 0.2), woodMat);
                 back.position.set(0, 2, -1.2);
                 benchGroup.add(back);
-                const legs = new THREE.Mesh(new THREE.BoxGeometry(5.8, 1, 2.3), benchMat);
-                legs.position.y = 0.5;
-                benchGroup.add(legs);
+                const legGeo = new THREE.BoxGeometry(0.3, 1, 0.3);
+                const legPositions = [
+                    { x: -2.7, z: -1.0 }, { x: 2.7, z: -1.0 },
+                    { x: -2.7, z: 1.0 }, { x: 2.7, z: 1.0 }
+                ];
+                legPositions.forEach(pos => {
+                    const leg = new THREE.Mesh(legGeo, benchMat);
+                    leg.position.set(pos.x, 0.5, pos.z);
+                    benchGroup.add(leg);
+                });
                 
                 benchGroup.position.set(i, 0, -8);
                 scene.add(benchGroup);
@@ -397,7 +404,7 @@
 
             // Abandoned Luggage (Suitcases)
             const bagMat = new THREE.MeshStandardMaterial({ color: 0x331100, roughness: 0.8 });
-            for(let i=0; i<8; i++) {
+            for(let i=0; i<4; i++) {
                 const bag = new THREE.Group();
                 const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1, 0.5), bagMat);
                 bag.add(body);
