@@ -75,6 +75,31 @@
             opacity: 0.7;
         }
 
+        #lighting-ctrl {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            z-index: 300;
+            color: cyan;
+            font-family: 'Courier New', Courier, monospace;
+            background: rgba(0, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-left: 3px solid cyan;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        #lighting-ctrl input {
+            cursor: pointer;
+            width: 150px;
+        }
+        #lighting-ctrl label {
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
         /* Mobile Controls */
         #mobile-controls {
             display: none;
@@ -148,6 +173,10 @@
     </div>
 
     <div id="crosshair"></div>
+    <div id="lighting-ctrl">
+        <label>Exposure</label>
+        <input type="range" id="exposure-range" min="0.1" max="3" step="0.1" value="2.0">
+    </div>
     <div id="stats-hud">
         DECOMMISSIONED: <span id="kills-val">0</span> | VITALITY: <span id="health-val">100</span>%
     </div>
@@ -243,7 +272,7 @@
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.toneMappingExposure = 1.2;
+            renderer.toneMappingExposure = 2.0;
             document.body.appendChild(renderer.domElement);
 
             // Post-Processing
@@ -285,6 +314,12 @@
             controls.getObject().position.set(-20, 4, 30);
 
             // Input
+            // Slider listener
+            const exposureSlider = document.getElementById('exposure-range');
+            exposureSlider.addEventListener('input', (e) => {
+                renderer.toneMappingExposure = parseFloat(e.target.value);
+            });
+
             if (isTouchDevice) {
                 initTouchControls();
             }
@@ -438,6 +473,7 @@
             }, { passive: false });
 
             lookArea.addEventListener('touchstart', (e) => {
+                if (e.target.closest('#lighting-ctrl')) return;
                 if (lookTouchId !== null) return;
                 lookTouchId = e.changedTouches[0].identifier;
                 lastLookX = e.changedTouches[0].pageX;
