@@ -91,6 +91,7 @@
         let clocks = [];
         let ledSign;
         let vendingMachines = [];
+        let cameras = [];
 
         init();
         animate();
@@ -394,6 +395,57 @@
             staircase.rotation.y = -0.2;
             scene.add(staircase);
 
+            // Security Cameras (Wall-mounted)
+            for(let i=-180; i<=180; i+=60) {
+                const camGroup = new THREE.Group();
+                const mount = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1), steelMat);
+                camGroup.add(mount);
+                const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2), steelMat);
+                housing.rotation.x = Math.PI / 2.5;
+                housing.position.z = 0.8;
+                camGroup.add(housing);
+                const lens = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff0000, emissiveIntensity: 2 }));
+                lens.position.set(0, -0.4, 1.4);
+                camGroup.add(lens);
+                
+                camGroup.position.set(i, 11, -8.8);
+                scene.add(camGroup);
+                cameras.push(lens);
+            }
+
+            // Graffiti (Procedural text decals)
+            for(let i=0; i<10; i++) {
+                const gCanvas = document.createElement('canvas');
+                gCanvas.width = 256; gCanvas.height = 128;
+                const gCtx = gCanvas.getContext('2d');
+                const colors = ['#ff00ff', '#00ff00', '#ffff00', '#ff0000'];
+                const color = colors[Math.floor(Math.random()*colors.length)];
+                gCtx.font = 'bold 60px "Courier New"';
+                gCtx.fillStyle = color;
+                gCtx.shadowBlur = 10; gCtx.shadowColor = color;
+                gCtx.fillText('VANDAL', 10, 80);
+                
+                const gTex = new THREE.CanvasTexture(gCanvas);
+                const graffiti = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), new THREE.MeshStandardMaterial({ map: gTex, transparent: true, opacity: 0.6, side: THREE.DoubleSide }));
+                graffiti.position.set(Math.random()*180-90, 4 + Math.random()*4, -8.99);
+                scene.add(graffiti);
+            }
+
+            // Wet Floor Signs
+            const signGeo = new THREE.PlaneGeometry(1, 2);
+            const signMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.2, side: THREE.DoubleSide });
+            for(let i=0; i<5; i++) {
+                const sign = new THREE.Group();
+                const side1 = new THREE.Mesh(signGeo, signMat);
+                side1.rotation.x = -0.2;
+                const side2 = new THREE.Mesh(signGeo, signMat);
+                side2.rotation.x = 0.2;
+                side2.position.z = 0.5;
+                sign.add(side1); sign.add(side2);
+                sign.position.set(Math.random()*140-70, 0.5, Math.random()*10-2);
+                scene.add(sign);
+            }
+
             // Vending Machines (Cyber-glow)
             for(let i=-60; i<=60; i+=120) {
                 const machineGroup = new THREE.Group();
@@ -483,7 +535,12 @@
             // Animate clock pulse
             clocks.forEach(face => {
                 const pulse = (Math.sin(time * 2) + 1) * 0.5;
-                face.material.emissiveIntensity = 2 + pulse * 6;
+                face.material.emissiveIntensity = 3 + pulse * 8;
+            });
+
+            // Animate Camera Lenses
+            cameras.forEach(lens => {
+                lens.material.emissiveIntensity = 1 + (Math.sin(time * 3) + 1) * 2;
             });
             
             // Animate Vending Machines
