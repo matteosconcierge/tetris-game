@@ -85,7 +85,7 @@
     </div>
     <div id="crosshair"></div>
     <div id="stats-hud">
-        DECOMMISSIONED: <span id="kills-val">0</span> | POWER: ∞
+        DECOMMISSIONED: <span id="kills-val">0</span> | VITALITY: <span id="health-val">100</span>%
     </div>
     <div id="clock-ui">00:00:00</div>
     <div id="vignette"></div>
@@ -108,15 +108,61 @@
         import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
-        let scene, camera, renderer, controls, composer, bloomPass;
-        let mainLights = [], adScreens = [], fans = [], drones = [], particles = [], collidables = [];
+        let scene, camera, renderer, controls, composer, bloomPass, audioCtx;
+        let mainLights = [], adScreens = [], fans = [], drones = [], particles = [], collidables = [], enemyProjectiles = [];
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
         let velocity = new THREE.Vector3(), direction = new THREE.Vector3();
-        let kills = 0, gun, muzzleFlash, dripArray, ledData;
+        let kills = 0, health = 100, gun, muzzleFlash, dripArray, ledData;
         const clock = new THREE.Clock();
 
         init();
         animate();
+
+        function playShotSound() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        function playExplodeSound() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const bufferSize = audioCtx.sampleRate * 0.2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            noise.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        }
+
+        function playDamageSound() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
 
         function init() {
             scene = new THREE.Scene();
@@ -278,6 +324,46 @@
             });
         }
 
+        function droneShoot(drone) {
+            const geo = new THREE.SphereGeometry(0.2);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(drone.position);
+            
+            const vel = new THREE.Vector3().subVectors(camera.position, drone.position).normalize().multiplyScalar(0.8);
+            enemyProjectiles.push({ mesh, vel });
+            scene.add(mesh);
+        }
+
+        function takeDamage(amt) {
+            playDamageSound();
+            health -= amt;
+            if(health < 0) health = 0;
+            document.getElementById('health-val').innerText = health;
+            
+            // Visual feedback
+            renderer.setClearColor(0xff0000, 0.2);
+            setTimeout(() => renderer.setClearColor(0x000205, 1), 50);
+
+            if(health <= 0) gameOver();
+        }
+
+        function gameOver() {
+            controls.unlock();
+            const msg = document.querySelector('.msg');
+            msg.innerHTML = "SYSTEM COMPROMISED";
+            msg.style.color = "#ff3300";
+            document.querySelector('.sub-msg').innerHTML = "DRONES OVERRAN THE STATION.<br>CLICK TO REBOOT";
+            
+            // Reset state
+            health = 100;
+            kills = 0;
+            document.getElementById('health-val').innerText = health;
+            document.getElementById('kills-val').innerText = kills;
+            enemyProjectiles.forEach(p => scene.remove(p.mesh));
+            enemyProjectiles = [];
+        }
+
         function spawnDrone() {
             const drone = new THREE.Group();
             drone.userData.isDrone = true;
@@ -293,6 +379,7 @@
         }
 
         function shoot() {
+            playShotSound();
             muzzleFlash.intensity = 150;
             setTimeout(() => muzzleFlash.intensity = 0, 50);
             
@@ -329,6 +416,7 @@
         }
 
         function explode(pos) {
+            playExplodeSound();
             for(let i=0; i<15; i++) {
                 const p = new THREE.Mesh(new THREE.SphereGeometry(0.12), new THREE.MeshStandardMaterial({ color: 0xff4400, emissive: 0xffaa00, emissiveIntensity: 5 }));
                 p.position.copy(pos);
@@ -342,7 +430,7 @@
             const delta = clock.getDelta();
             const time = clock.getElapsedTime();
 
-            if (controls.isLocked) {
+            if (controls.isLocked && health > 0) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
                 velocity.y -= 9.8 * 80.0 * delta; // Heavy Gravity
@@ -351,11 +439,32 @@
                 direction.x = Number(moveRight) - Number(moveLeft);
                 direction.normalize();
 
-                if (moveForward || moveBackward) velocity.z -= direction.z * 600.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 600.0 * delta;
+                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
 
+                // COLLISION DETECTION (Simple)
+                const prevPos = controls.getObject().position.clone();
+                
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
+                
+                let playerPos = controls.getObject().position;
+                let hitObject = false;
+                
+                collidables.forEach(c => {
+                    const bounds = new THREE.Box3().setFromObject(c);
+                    const playerBox = new THREE.Box3().setFromCenterAndSize(
+                        new THREE.Vector3(playerPos.x, 10, playerPos.z), 
+                        new THREE.Vector3(2, 20, 2)
+                    );
+                    if(bounds.intersectsBox(playerBox)) hitObject = true;
+                });
+                
+                if(hitObject) {
+                    controls.getObject().position.copy(prevPos);
+                    velocity.x = 0;
+                    velocity.z = 0;
+                }
                 
                 controls.getObject().position.y += (velocity.y * delta);
                 if (controls.getObject().position.y < 4) {
@@ -374,7 +483,25 @@
             drones.forEach(d => {
                 d.mesh.position.y += Math.sin(time * 2 + d.noise) * 0.02;
                 d.mesh.lookAt(camera.position);
+                
+                // Random shooting
+                if(Math.random() < 0.005) droneShoot(d.mesh);
             });
+            
+            // Projectiles
+            enemyProjectiles.forEach((p, i) => {
+                p.mesh.position.add(p.vel);
+                if(p.mesh.position.distanceTo(camera.position) < 2) {
+                    takeDamage(10);
+                    scene.remove(p.mesh);
+                    enemyProjectiles.splice(i, 1);
+                }
+                if(p.mesh.position.length() > 500) {
+                    scene.remove(p.mesh);
+                    enemyProjectiles.splice(i, 1);
+                }
+            });
+
             adScreens.forEach(ad => {
                 ad.mesh.material.emissiveIntensity = 1.0 + Math.sin(time * 0.8 + ad.phase) * 0.5;
             });
