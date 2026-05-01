@@ -89,6 +89,7 @@
         let scene, camera, renderer, controls, ambientLight;
         let neons = [];
         let clocks = [];
+        let ledSign;
 
         init();
         animate();
@@ -350,6 +351,47 @@
             const dMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.15 });
             const dust = new THREE.Points(dGeo, dMat);
             scene.add(dust);
+            
+            // Scrolling LED Sign for delays
+            const ledCanvas = document.createElement('canvas');
+            ledCanvas.width = 1024; ledCanvas.height = 128;
+            const ledCtx = ledCanvas.getContext('2d');
+            const ledTex = new THREE.CanvasTexture(ledCanvas);
+            const ledSignMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(10, 1.2, 0.4),
+                new THREE.MeshStandardMaterial({ map: ledTex, emissiveMap: ledTex, emissive: 0xff3300, emissiveIntensity: 2 })
+            );
+            ledSignMesh.position.set(0, 10, 8.5);
+            scene.add(ledSignMesh);
+            ledSign = { canvas: ledCanvas, ctx: ledCtx, tex: ledTex, offset: 0 };
+
+            // Trash Cans (Industrial cylindrical)
+            const binMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.7, roughness: 0.2 });
+            for(let i=-90; i<=90; i+=45) {
+                if(i % 90 === 0) continue;
+                const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 2, 16), binMat);
+                bin.position.set(i + 5, 1, -8);
+                scene.add(bin);
+            }
+
+            // Scattered Papers on the ground
+            const paperMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 1.0, side: THREE.DoubleSide });
+            for(let i=0; i<30; i++) {
+                const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.4), paperMat);
+                paper.rotation.x = -Math.PI / 2;
+                paper.rotation.z = Math.random() * Math.PI;
+                paper.position.set(Math.random()*160-80, 0.03, Math.random()*15-5);
+                scene.add(paper);
+            }
+
+            // Far End Escalator Base (Atmospheric silhouette)
+            const staircase = new THREE.Mesh(
+                new THREE.BoxGeometry(15, 20, 30),
+                new THREE.MeshStandardMaterial({ color: 0x050505 })
+            );
+            staircase.position.set(90, 5, -5);
+            staircase.rotation.y = -0.2;
+            scene.add(staircase);
 
             // --- UI LOGIC ---
             const exposureSlider = document.getElementById('exposure');
@@ -388,8 +430,20 @@
             // Animate clock pulse
             clocks.forEach(face => {
                 const pulse = (Math.sin(time * 2) + 1) * 0.5;
-                face.material.emissiveIntensity = 1 + pulse * 4;
+                face.material.emissiveIntensity = 2 + pulse * 6;
             });
+            
+            // Animate LED Sign
+            if(ledSign) {
+                ledSign.offset -= 3;
+                if(ledSign.offset < -2000) ledSign.offset = 1024;
+                ledSign.ctx.fillStyle = '#000';
+                ledSign.ctx.fillRect(0,0,1024,128);
+                ledSign.ctx.fillStyle = '#ff3300';
+                ledSign.ctx.font = 'bold 70px Courier New';
+                ledSign.ctx.fillText('STATION 402 - DELAYED - CHECK NETWORK STATUS - TRACKS CLEAR - ', ledSign.offset, 90);
+                ledSign.tex.needsUpdate = true;
+            }
             
             // Tweak fog based on exposure for depth
             scene.fog.density = 0.02 * (1.5 / renderer.toneMappingExposure);
