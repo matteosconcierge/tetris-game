@@ -281,30 +281,49 @@
             }
 
             // Benches (Victorian/Industrial Style)
-            const benchMat = new THREE.MeshStandardMaterial({ color: 0x110a05, roughness: 0.8 });
-            const woodMat = new THREE.MeshStandardMaterial({ color: 0x221105, roughness: 0.9 });
+            const benchMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x884422, roughness: 0.7 });
             for(let i=-100; i<=100; i+=50) {
                 if (Math.abs(i) === 0) continue; // Skip pillars
-                const benchGroup = new THREE.Group();
-                const base = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 2.5), woodMat);
-                base.position.y = 1;
-                benchGroup.add(base);
-                const back = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 0.2), woodMat);
-                back.position.set(0, 2, -1.2);
-                benchGroup.add(back);
-                const legGeo = new THREE.BoxGeometry(0.3, 1, 0.3);
-                const legPositions = [
-                    { x: -2.7, z: -1.0 }, { x: 2.7, z: -1.0 },
-                    { x: -2.7, z: 1.0 }, { x: 2.7, z: 1.0 }
-                ];
-                legPositions.forEach(pos => {
-                    const leg = new THREE.Mesh(legGeo, benchMat);
-                    leg.position.set(pos.x, 0.5, pos.z);
-                    benchGroup.add(leg);
-                });
                 
-                benchGroup.position.set(i, 0, -8);
-                scene.add(benchGroup);
+                const bench = new THREE.Group();
+                
+                // Seat: 5 slats for more detail
+                for(let s = 0; s < 5; s++) {
+                    const slat = new THREE.Mesh(new THREE.BoxGeometry(6, 0.15, 0.4), woodMat);
+                    slat.position.set(0, 1.2, -0.8 + s * 0.5);
+                    slat.castShadow = true;
+                    bench.add(slat);
+                }
+                
+                // Backrest: 2 slats
+                for(let s = 0; s < 3; s++) {
+                    const slat = new THREE.Mesh(new THREE.BoxGeometry(6, 0.4, 0.15), woodMat);
+                    slat.position.set(0, 2.0 + s * 0.5, -1.0);
+                    slat.castShadow = true;
+                    bench.add(slat);
+                }
+                
+                // Cast iron frame/legs
+                const frameGeo = new THREE.BoxGeometry(0.2, 2.5, 2.5);
+                const lFrame = new THREE.Mesh(frameGeo, benchMat);
+                lFrame.position.set(-2.8, 1, 0);
+                const rFrame = new THREE.Mesh(frameGeo, benchMat);
+                rFrame.position.set(2.8, 1, 0);
+                bench.add(lFrame);
+                bench.add(rFrame);
+                
+                // Armrests
+                const armGeo = new THREE.BoxGeometry(0.2, 0.1, 2.5);
+                const lArm = new THREE.Mesh(armGeo, benchMat);
+                lArm.position.set(-2.8, 1.8, 0);
+                const rArm = new THREE.Mesh(armGeo, benchMat);
+                rArm.position.set(2.8, 1.8, 0);
+                bench.add(lArm);
+                bench.add(rArm);
+
+                bench.position.set(i, 0, -7);
+                scene.add(bench);
             }
 
             // Station Clocks (Double-sided)
