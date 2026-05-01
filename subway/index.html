@@ -3,73 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Station 402 - Final Masterpiece Polish</title>
+    <title>Station 402 - Emergency Visibility Fix</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
         canvas { display: block; }
-        
-        #ui-container {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px 20px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff;
-            z-index: 1000;
-            user-select: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        #ui {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 10px;
+            color: #000; z-index: 1000; border: 2px solid #000;
         }
-
-        .label {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #888;
-            font-weight: bold;
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 160px;
-            height: 4px;
-            background: #333;
-            border-radius: 2px;
-            outline: none;
-        }
-
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px; height: 20px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        #interaction-hint {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: rgba(255,255,255,0.2);
-            font-size: 10px;
-            letter-spacing: 1px;
-            pointer-events: none;
-            text-transform: uppercase;
-        }
+        input { width: 200px; }
+        .label { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
-    <div id="ui-container">
-        <span class="label">Atmosphere Exposure</span>
-        <input type="range" id="exposure" min="0.1" max="5.0" step="0.01" value="2.5">
+    <div id="ui">
+        <div class="label">BRIGHTNESS CONTROL</div>
+        <input type="range" id="exposure" min="0.1" max="10.0" step="0.1" value="5.0">
+        <div style="font-size: 10px; margin-top: 5px; color: #666;">Move slider to the right if dark</div>
     </div>
-
-    <div id="interaction-hint">Rotate: 1 Finger • Zoom: Pinch • Pan: 2 Fingers</div>
 
     <script type="importmap">
         {
@@ -84,226 +36,106 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        let scene, camera, renderer, controls, ambientLight;
-        let neons = [], ledSign, clocks = [];
+        let scene, camera, renderer, controls, ambientLight, mainLight;
 
         init();
         animate();
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x010101);
-            scene.fog = new THREE.FogExp2(0x010101, 0.02);
+            scene.background = new THREE.Color(0x222222); // Not black background
 
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(-20, 5, 20);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(-30, 10, 30);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ReinhardToneMapping;
-            renderer.toneMappingExposure = 2.5;
+            renderer.setPixelRatio(window.devicePixelRatio);
+            // REMOVED TONE MAPPING for pure visibility test
             document.body.appendChild(renderer.domElement);
 
             controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 + 0.02;
-            controls.target.set(0, 3, 0);
+            controls.target.set(0, 2, 0);
+            controls.update();
 
-            // --- STATION CONSTRUCTION ---
-
-            // Floor: Grey concrete with reflection
-            const floorGeo = new THREE.PlaneGeometry(300, 50, 1, 1);
-            const floorMat = new THREE.MeshStandardMaterial({ 
-                color: 0x222222, 
-                roughness: 0.3,
-                metalness: 0.2
-            });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
-
-            // Platform Warning Strip (Recessed look)
-            const strip = new THREE.Mesh(
-                new THREE.PlaneGeometry(300, 1.2),
-                new THREE.MeshStandardMaterial({ color: 0xeeaa00, roughness: 0.2 })
-            );
-            strip.rotation.x = -Math.PI / 2;
-            strip.position.set(0, 0.02, 10);
-            scene.add(strip);
-
-            // Tracks
-            const tracksGeo = new THREE.PlaneGeometry(300, 30);
-            const tracksMat = new THREE.MeshStandardMaterial({ color: 0x050505 });
-            const tracks = new THREE.Mesh(tracksGeo, tracksMat);
-            tracks.rotation.x = -Math.PI / 2;
-            tracks.position.set(0, -1.0, 26);
-            scene.add(tracks);
-
-            // Rails (Steel)
-            for(let zOff of [18, 22, 30, 34]) {
-                const rail = new THREE.Mesh(new THREE.BoxGeometry(300, 0.4, 0.6), new THREE.MeshStandardMaterial({ color: 0x333333 }));
-                rail.position.set(0, -0.8, zOff);
-                scene.add(rail);
-            }
-
-            // Pillars
-            const steelMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 1.0, roughness: 0.2 });
-            for(let i=-120; i<=120; i+=40) {
-                const pillar = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), steelMat);
-                pillar.position.set(i, 7.5, 6);
-                pillar.castShadow = true;
-                pillar.receiveShadow = true;
-                scene.add(pillar);
-            }
-
-            // Back Wall
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.5 });
-            const wall = new THREE.Mesh(new THREE.BoxGeometry(300, 20, 2), wallMat);
-            wall.position.set(0, 10, -10);
-            scene.add(wall);
-
-            // Ceiling
-            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(300, 60), new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
-            ceiling.rotation.x = Math.PI / 2;
-            ceiling.position.set(0, 15, 10);
-            scene.add(ceiling);
-
-            // --- THE MISSION: ACTUALLY VISIBLE BENCHES ---
-            const benchSteel = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.2 });
-            const benchWood = new THREE.MeshStandardMaterial({ color: 0xdd8833, roughness: 0.5 }); // Bright clear oak
-
-            for(let i=-80; i<=80; i+=80) {
-                const benchGroup = new THREE.Group();
-
-                // 2 Huge Solid Sides
-                const sideGeo = new THREE.BoxGeometry(0.5, 3, 3.5);
-                const lSide = new THREE.Mesh(sideGeo, benchSteel); lSide.position.set(-3.5, 1.5, 0);
-                const rSide = new THREE.Mesh(sideGeo, benchSteel); rSide.position.set(3.5, 1.5, 0);
-                benchGroup.add(lSide); benchGroup.add(rSide);
-
-                // Huge Solid Seat (One big block)
-                const seat = new THREE.Mesh(new THREE.BoxGeometry(7, 0.6, 2.8), benchWood);
-                seat.position.set(0, 1.2, 0);
-                seat.castShadow = true;
-                benchGroup.add(seat);
-
-                // Huge Solid Backrest
-                const back = new THREE.Mesh(new THREE.BoxGeometry(7, 2, 0.5), benchWood);
-                back.position.set(0, 2.5, -1.5);
-                back.castShadow = true;
-                benchGroup.add(back);
-
-                // Local bench light
-                const bl = new THREE.PointLight(0xccaa66, 10, 8);
-                bl.position.set(0, 5, 0);
-                benchGroup.add(bl);
-
-                benchGroup.position.set(i + 20, 0, -6);
-                scene.add(benchGroup);
-            }
-
-            // --- LIGHTING ---
-            ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+            // --- LIGHTING (MEGA BRIGHT) ---
+            ambientLight = new THREE.AmbientLight(0xffffff, 2.0); // Extreme ambient
             scene.add(ambientLight);
 
-            // Neons
-            for (let i = -100; i <= 100; i += 50) {
-                const tube = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.2, 0.2, 10, 8),
-                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 5 })
+            mainLight = new THREE.DirectionalLight(0xffffff, 2.0);
+            mainLight.position.set(10, 50, 10);
+            scene.add(mainLight);
+
+            // --- STATION OBJECTS ---
+
+            // Floor (Light Gray to reflect light)
+            const floor = new THREE.Mesh(
+                new THREE.BoxGeometry(400, 1, 100),
+                new THREE.MeshStandardMaterial({ color: 0x888888 })
+            );
+            floor.position.y = -0.5;
+            scene.add(floor);
+
+            // Platform Warning (Orange Block - SOLID)
+            const strip = new THREE.Mesh(
+                new THREE.BoxGeometry(400, 0.2, 2),
+                new THREE.MeshStandardMaterial({ color: 0xffaa00 })
+            );
+            strip.position.set(0, 0.1, 10);
+            scene.add(strip);
+
+            // THE BENCHES (ULTRA ROBUST BLOCKS)
+            const benchSteel = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const benchWood = new THREE.MeshStandardMaterial({ color: 0xff8800 }); // Neon Orange Wood
+
+            for(let i = -100; i <= 100; i += 50) {
+                const bench = new THREE.Group();
+                
+                // Huge base block (Instead of legs)
+                const base = new THREE.Mesh(new THREE.BoxGeometry(8, 1, 3), benchSteel);
+                base.position.y = 0.5;
+                bench.add(base);
+
+                // Huge seat block
+                const seat = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.8, 3.2), benchWood);
+                seat.position.y = 1.4;
+                bench.add(seat);
+
+                // Huge backrest block
+                const back = new THREE.Mesh(new THREE.BoxGeometry(8.2, 3, 0.8), benchWood);
+                back.position.set(0, 3, -1.2);
+                bench.add(back);
+
+                bench.position.set(i, 0, -5);
+                scene.add(bench);
+            }
+
+            // Pillars (White to ensure visibility)
+            for(let i = -120; i <= 120; i += 40) {
+                const p = new THREE.Mesh(
+                    new THREE.BoxGeometry(4, 20, 4),
+                    new THREE.MeshStandardMaterial({ color: 0xffffff })
                 );
-                tube.rotation.z = Math.PI/2;
-                tube.position.set(i, 14.5, 2);
-                scene.add(tube);
-                const pl = new THREE.PointLight(0xffffff, 400, 60);
-                pl.position.set(i, 13, 2);
-                pl.castShadow = true;
-                scene.add(pl);
-                neons.push({light: pl, tube});
+                p.position.set(i, 10, 8);
+                scene.add(p);
             }
 
-            // Digital Clock
-            for(let i=-60; i<=60; i+=120) {
-                const cBody = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 0.8), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-                const cFace = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.2), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff3300, emissiveIntensity: 2 }));
-                cFace.position.z = 0.41;
-                cBody.add(cFace);
-                cBody.position.set(i, 9, 6);
-                scene.add(cBody);
-                clocks.push(cFace);
-            }
-
-            // LED Delayed Sign
-            const ledCanvas = document.createElement('canvas');
-            ledCanvas.width = 1024; ledCanvas.height = 128;
-            const ledCtx = ledCanvas.getContext('2d');
-            const ledTex = new THREE.CanvasTexture(ledCanvas);
-            const ledMesh = new THREE.Mesh(new THREE.BoxGeometry(12, 1.5, 0.5), new THREE.MeshStandardMaterial({ map: ledTex, emissiveMap: ledTex, emissive: 0xff4422, emissiveIntensity: 2 }));
-            ledMesh.position.set(0, 11, 8.5);
-            scene.add(ledMesh);
-            ledSign = { canvas, ctx: ledCtx, tex: ledTex, offset: 0 };
-
-            // Cleanup Confusion: Removed all yellow "Wet Floor" triangular shapes
-
-            // Vending Machines
-            for(let i=-100; i<=100; i+=200) {
-                const vm = new THREE.Mesh(new THREE.BoxGeometry(5, 10, 4), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-                const glow = new THREE.Mesh(new THREE.PlaneGeometry(4, 8), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00ffff, emissiveIntensity: 1.5 }));
-                glow.position.z = 2.01;
-                vm.add(glow);
-                vm.position.set(i, 5, -8);
-                scene.add(vm);
-            }
-
-            // Suitcases (Only 2)
-            for(let i=0; i<2; i++) {
-                const suit = new THREE.Mesh(new THREE.BoxGeometry(2, 1.4, 0.8), new THREE.MeshStandardMaterial({ color: 0x442211 }));
-                suit.position.set(i === 0 ? -40 : 40, 0.7, 4);
-                scene.add(suit);
-            }
-
-            // --- UI ---
+            // Slider Logic
             document.getElementById('exposure').addEventListener('input', (e) => {
-                const v = parseFloat(e.target.value);
-                renderer.toneMappingExposure = v;
-                ambientLight.intensity = 0.2 * (v / 2.5);
+                const val = parseFloat(e.target.value);
+                ambientLight.intensity = val;
+                mainLight.intensity = val;
             });
 
             window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            const time = performance.now() * 0.001;
-
-            neons.forEach(n => {
-                if(Math.random() > 0.99) {
-                    const oldI = n.light.intensity, oldE = n.tube.material.emissiveIntensity;
-                    n.light.intensity *= 0.2; n.tube.material.emissiveIntensity *= 0.2;
-                    setTimeout(() => { n.light.intensity = oldI; n.tube.material.emissiveIntensity = oldE; }, 100);
-                }
-            });
-
-            clocks.forEach(c => {
-                c.material.emissiveIntensity = 1.5 + (Math.sin(time*2) + 1) * 2;
-            });
-
-            if(ledSign) {
-                ledSign.offset -= 4; if(ledSign.offset < -2400) ledSign.offset = 1024;
-                ledSign.ctx.fillStyle = '#000'; ledSign.ctx.fillRect(0,0,1024,128);
-                ledSign.ctx.fillStyle = '#ff4422'; ledSign.ctx.font = 'bold 75px Courier New';
-                ledSign.ctx.fillText('STATION 402 - ALL SERVICES SUSPENDED - CHECK YOUR BIOMETRIC PASS - ', ledSign.offset, 90);
-                ledSign.tex.needsUpdate = true;
-            }
-
             controls.update();
             renderer.render(scene, camera);
         }
