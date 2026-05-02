@@ -224,9 +224,10 @@
                 const geo = new THREE.OctahedronGeometry(0.6, 0);
                 const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 5, metalness: 0.9, roughness: 0.1 });
                 this.mesh = new THREE.Mesh(geo, mat);
-                this.mesh.position.set(Math.random()*100-50, 5+Math.random()*5, Math.random()*10-5);
+                // Confined spawn: within platform length and visible width
+                this.mesh.position.set(Math.random()*160-80, 5+Math.random()*4, Math.random()*14-7);
                 this.theta = Math.random() * Math.PI * 2;
-                this.orbitRadius = 15 + Math.random() * 10;
+                this.orbitRadius = 5 + Math.random() * 8; // Smaller orbit to stay within view
                 this.speed = 0.01 + Math.random() * 0.01;
                 this.lastShotTime = performance.now();
                 this.health = 2;
@@ -239,8 +240,12 @@
             }
             update(time, playerPos) {
                 this.theta += this.speed;
-                this.mesh.position.x = playerPos.x + Math.sin(this.theta) * this.orbitRadius;
-                this.mesh.position.z = playerPos.z + Math.cos(this.theta) * this.orbitRadius;
+                // Confine drone movement to station bounds [x: -90 to 90, z: -8 to 8]
+                let targetX = playerPos.x + Math.sin(this.theta) * this.orbitRadius;
+                let targetZ = playerPos.z + Math.cos(this.theta) * this.orbitRadius;
+                
+                this.mesh.position.x = Math.max(-90, Math.min(90, targetX));
+                this.mesh.position.z = Math.max(-8, Math.min(8, targetZ));
                 this.mesh.position.y = 6 + Math.sin(time * 0.5) * 2;
                 this.mesh.rotation.y += 0.05; this.mesh.rotation.x += 0.02;
                 if (performance.now() - this.lastShotTime > 3000 + Math.random() * 2000) {
@@ -553,8 +558,16 @@
             if(moveForward || moveBackward || (isMobile && Math.abs(joystickInput.y) > 0.1)) velocity.z -= direction.z * 400 * delta;
             if(moveLeft || moveRight || (isMobile && Math.abs(joystickInput.x) > 0.1)) velocity.x -= direction.x * 400 * delta;
             controls.moveRight(-velocity.x * delta); controls.moveForward(-velocity.z * delta);
-            controls.getObject().position.y += velocity.y * delta;
-            if(controls.getObject().position.y < 4) { velocity.y = 0; controls.getObject().position.y = 4; canJump = true; }
+
+            // --- SPATIAL BOUNDARIES (Collision Detection) ---
+            const playerObj = controls.getObject();
+            // Confine player to platform area
+            // Back wall is at -10, Train is at 30, but platform safe edge is around 8.5
+            playerObj.position.x = Math.max(-95, Math.min(95, playerObj.position.x));
+            playerObj.position.z = Math.max(-8.5, Math.min(8.5, playerObj.position.z));
+
+            playerObj.position.y += velocity.y * delta;
+            if(playerObj.position.y < 4) { velocity.y = 0; playerObj.position.y = 4; canJump = true; }
 
             // Animations (Neons, LED, Vending)
             neons.forEach(n => { if(Math.random() > 0.99) { n.light.intensity = n.base * 0.2; setTimeout(() => n.light.intensity = n.base, 100); } });
