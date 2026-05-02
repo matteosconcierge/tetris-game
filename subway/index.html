@@ -201,9 +201,6 @@
         let joystickInput = { x: 0, y: 0 };
         let joystickTouchId = null;
 
-        init();
-        animate();
-
         function init() {
             // --- BASE SETUP ---
             scene = new THREE.Scene();
@@ -836,6 +833,9 @@
             renderer.render(scene, camera);
             prevTime = performance.now();
         }
+
+        init();
+        animate();
     </script>
 </body>
 </html>
