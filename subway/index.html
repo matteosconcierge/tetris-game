@@ -171,448 +171,9 @@
         import * as THREE from 'three';
         import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
         
-        // Global variables for benches restoration
-        let benches = [];
-
-        let scene, camera, renderer, controls, ambientLight;
-        let neons = [];
-        let clocks = [];
-        let ledSign;
-        let vendingMachines = [];
-        let cameras = [];
-        
-        // Game State
-        let playerHealth = 100;
-        let killCount = 0;
-        let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        
-        // Movement
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
-        let velocity = new THREE.Vector3();
-        let direction = new THREE.Vector3();
-        let prevTime = performance.now();
-
-        // Combat
-        let drones = [];
-        let bullets = [];
-        let lastFireTime = 0;
-
-        // Mobile Controls State
-        let joystickInput = { x: 0, y: 0 };
-        let joystickTouchId = null;
-
-        function init() {
-            // --- BASE SETUP ---
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x020202);
-            scene.fog = new THREE.FogExp2(0x020202, 0.02);
-
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 3, 0); // Start in middle of platform
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 2.8; // Back to high initial exposure
-
-            document.body.appendChild(renderer.domElement);
-
-            // --- CONTROLS ---
-            controls = new PointerLockControls(camera, document.body);
-
-            const overlay = document.getElementById('overlay');
-            overlay.addEventListener('click', () => {
-                controls.lock();
-            });
-
-            controls.addEventListener('lock', () => {
-                overlay.style.display = 'none';
-            });
-
-            controls.addEventListener('unlock', () => {
-                overlay.style.display = 'flex';
-            });
-
-            scene.add(controls.getObject());
-
-            // Keyboard
-            const onKeyDown = (event) => {
-                switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW': moveForward = true; break;
-                    case 'ArrowLeft':
-                    case 'KeyA': moveLeft = true; break;
-                    case 'ArrowDown':
-                    case 'KeyS': moveBackward = true; break;
-                    case 'ArrowRight':
-                    case 'KeyD': moveRight = true; break;
-                    case 'Space': if (canJump === true) velocity.y += 25; canJump = false; break;
-                }
-            };
-            const onKeyUp = (event) => {
-                switch (event.code) {
-                    case 'ArrowUp':
-                    case 'KeyW': moveForward = false; break;
-                    case 'ArrowLeft':
-                    case 'KeyA': moveLeft = false; break;
-                    case 'ArrowDown':
-                    case 'KeyS': moveBackward = false; break;
-                    case 'ArrowRight':
-                    case 'KeyD': moveRight = false; break;
-                }
-            };
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-            document.addEventListener('mousedown', (e) => {
-                if (controls.isLocked) fireBullet();
-            });
-
-            // Mobile Setup
-            if (isMobile) {
-                document.getElementById('mobile-controls').style.display = 'block';
-                setupMobileJoystick();
-                document.getElementById('fire-button').addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    fireBullet();
-                });
-                
-                let lastTouchX = 0, lastTouchY = 0;
-                renderer.domElement.addEventListener('touchstart', (e) => {
-                    if (e.target.id === 'joystick-base' || e.target.id === 'fire-button') return;
-                    lastTouchX = e.touches[0].pageX;
-                    lastTouchY = e.touches[0].pageY;
-                });
-                renderer.domElement.addEventListener('touchmove', (e) => {
-                    if (e.target.id === 'joystick-base' || e.target.id === 'fire-button') return;
-                    const touch = e.touches[0];
-                    const movementX = touch.pageX - lastTouchX;
-                    const movementY = touch.pageY - lastTouchY;
-                    lastTouchX = touch.pageX;
-                    lastTouchY = touch.pageY;
-
-                    camera.rotation.y -= movementX * 0.005;
-                    camera.rotation.x -= movementY * 0.005;
-                    camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
-                }, { passive: false });
-            }
-
-            // --- STATION ENVIRONMENT (Preserved from original) ---
-            const textureLoader = new THREE.TextureLoader();
-
-            // Floor
-            const floorGroup = new THREE.Group();
-            const floorGeo = new THREE.PlaneGeometry(200, 40, 100, 20);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.15, metalness: 0.8 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            floorGroup.add(floor);
-
-            // Puddles
-            const puddleMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.0, metalness: 1.0, transparent: true, opacity: 0.7 });
-            for(let i=0; i<15; i++) {
-                const puddle = new THREE.Mesh(new THREE.CircleGeometry(Math.random()*4 + 1, 32), puddleMat);
-                puddle.rotation.x = -Math.PI / 2;
-                puddle.position.set(Math.random()*160 - 80, 0.01, Math.random()*15 - 5);
-                puddle.scale.set(1.5, 1, 1);
-                floorGroup.add(puddle);
-            }
-            scene.add(floorGroup);
-
-            // Yellow Warning Strip
-            const strip = new THREE.Mesh(
-                new THREE.PlaneGeometry(200, 1.5),
-                new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.3, metalness: 0.4 })
-            );
-            strip.rotation.x = -Math.PI / 2;
-            strip.position.set(0, 0.02, 9);
-            scene.add(strip);
-
-            // Tracks
-            const tracksGeo = new THREE.PlaneGeometry(200, 30);
-            const tracksMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 1 });
-            const tracks = new THREE.Mesh(tracksGeo, tracksMat);
-            tracks.rotation.x = -Math.PI / 2;
-            tracks.position.set(0, -1.2, 25);
-            scene.add(tracks);
-
-            // Rails
-            const railGeo = new THREE.BoxGeometry(200, 0.3, 0.5);
-            const railMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 1, roughness: 0.2 });
-            for(let zOffset of [16, 20, 30, 34]) {
-                const rail = new THREE.Mesh(railGeo, railMat);
-                rail.position.set(0, -1, zOffset);
-                scene.add(rail);
-            }
-
-            // Back Wall
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.4, metalness: 0.1 });
-            const backWall = new THREE.Mesh(new THREE.BoxGeometry(200, 18, 2), wallMat);
-            backWall.position.set(0, 8.5, -10);
-            backWall.receiveShadow = true;
-            scene.add(backWall);
-
-            for(let i=-100; i<=100; i+=10) {
-                const line = new THREE.Mesh(new THREE.BoxGeometry(0.05, 18, 2.1), new THREE.MeshStandardMaterial({ color: 0x000000 }));
-                line.position.set(i, 8.5, -10);
-                scene.add(line);
-            }
-
-            // Pillars
-            const steelMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 1, roughness: 0.3 });
-            for(let i=-80; i<=80; i+=40) {
-                const pillar = new THREE.Mesh(new THREE.BoxGeometry(2.5, 12, 2.5), steelMat);
-                pillar.position.set(i, 5.5, 6);
-                pillar.castShadow = true;
-                pillar.receiveShadow = true;
-                scene.add(pillar);
-            }
-
-            // Bench Restoration
-            const oakMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, roughness: 0.5 });
-            for(let i=-60; i<=60; i+=40) {
-                if (i === 0) continue; // Skip pillar area
-                const benchGroup = new THREE.Group();
-                const seat = new THREE.Mesh(new THREE.BoxGeometry(6, 0.4, 2), oakMat);
-                seat.position.y = 1.2; seat.castShadow = true; benchGroup.add(seat);
-                const back = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 0.3), oakMat);
-                back.position.set(0, 2, -0.9); back.castShadow = true; benchGroup.add(back);
-                const legGeo = new THREE.BoxGeometry(0.3, 1.2, 0.3);
-                for(let lx of [-2.5, 2.5]) {
-                    for(let lz of [-0.8, 0.8]) {
-                        const leg = new THREE.Mesh(legGeo, steelMat);
-                        leg.position.set(lx, 0.6, lz); benchGroup.add(leg);
-                    }
-                }
-                benchGroup.position.set(i, 0, -5);
-                scene.add(benchGroup);
-            }
-
-            // Ceiling with Pipes
-            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(200, 60), new THREE.MeshStandardMaterial({ color: 0x080808 }));
-            ceiling.rotation.x = Math.PI / 2;
-            ceiling.position.set(0, 12, 10);
-            scene.add(ceiling);
-
-            for(let i=0; i<6; i++) {
-                const pipe = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.3, 0.3, 200, 16),
-                    new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0x885533 : 0x222222, metalness: 1, roughness: 0.1 })
-                );
-                pipe.rotation.z = Math.PI / 2;
-                pipe.position.set(0, 11, -8 + i * 4);
-                scene.add(pipe);
-            }
-
-            // --- LIGHTING ---
-            ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
-            scene.add(ambientLight);
-
-            for(let i=-80; i<=80; i+=40) {
-                const neonGroup = new THREE.Group();
-                const tube = new THREE.Mesh(
-                    new THREE.CylinderGeometry(0.15, 0.15, 12, 8),
-                    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 10 })
-                );
-                tube.rotation.z = Math.PI / 2;
-                neonGroup.add(tube);
-                const light = new THREE.PointLight(0xffffff, 600, 50, 2);
-                light.position.y = -1;
-                light.castShadow = true;
-                light.shadow.bias = -0.005;
-                neonGroup.add(light);
-                neonGroup.position.set(i, 11.5, 2);
-                scene.add(neonGroup);
-                neons.push({ room: neonGroup, light, tube, baseInt: 600 });
-            }
-
-            // Billboards
-            for(let i=-60; i<=60; i+=60) {
-                const adColor = i === 0 ? 0x00ffcc : 0xff3300;
-                const adCanvas = document.createElement('canvas');
-                adCanvas.width = 512; adCanvas.height = 256;
-                const adCtx = adCanvas.getContext('2d');
-                adCtx.fillStyle = '#0a0a0a'; adCtx.fillRect(0,0,512,256);
-                adCtx.strokeStyle = adColor; adCtx.lineWidth = 15; adCtx.strokeRect(10,10,492,236);
-                adCtx.fillStyle = adColor; adCtx.font = 'bold 80px Arial'; adCtx.textAlign = 'center';
-                adCtx.fillText(i === 0 ? 'CYBER' : 'DANGER', 256, 120);
-                adCtx.font = '20px monospace'; adCtx.fillText('SUBWAY NETWORK 402 - SECURE', 256, 185);
-                const adTex = new THREE.CanvasTexture(adCanvas);
-                const ad = new THREE.Mesh(
-                    new THREE.BoxGeometry(12, 7, 0.6),
-                    new THREE.MeshStandardMaterial({ map: adTex, emissiveMap: adTex, emissive: adColor, emissiveIntensity: 1.5 })
-                );
-                ad.position.set(i, 6, -9);
-                scene.add(ad);
-                const adLight = new THREE.PointLight(adColor, 150, 20);
-                adLight.position.set(i, 6, -6);
-                scene.add(adLight);
-            }
-
-            // Train
-            const train = new THREE.Group();
-            const carMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 1, roughness: 0.2 });
-            for(let i=0; i<3; i++) {
-                const car = new THREE.Mesh(new THREE.BoxGeometry(50, 8, 7), carMat);
-                car.position.set(i * 55 - 55, 4, 30);
-                train.add(car);
-                for(let w = -20; w <= 20; w += 8) {
-                    const win = new THREE.Mesh(new THREE.BoxGeometry(4, 2.5, 7.2), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveIntensity: 0.3 }));
-                    win.position.set(i * 55 - 55 + w, 5.5, 30);
-                    train.add(win);
-                }
-            }
-            scene.add(train);
-
-            // Dust
-            const dGeo = new THREE.BufferGeometry();
-            const dPos = new Float32Array(5000 * 3);
-            for(let i=0; i<5000*3; i+=3) {
-                dPos[i] = Math.random()*200-100;
-                dPos[i+1] = Math.random()*15;
-                dPos[i+2] = Math.random()*40-10;
-            }
-            dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
-            const dMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.15 });
-            const dust = new THREE.Points(dGeo, dMat);
-            scene.add(dust);
-            
-            // LED Sign
-            const ledCanvas = document.createElement('canvas');
-            ledCanvas.width = 1024; ledCanvas.height = 128;
-            const ledCtx = ledCanvas.getContext('2d');
-            const ledTex = new THREE.CanvasTexture(ledCanvas);
-            const ledSignMesh = new THREE.Mesh(new THREE.BoxGeometry(10, 1.2, 0.4), new THREE.MeshStandardMaterial({ map: ledTex, emissiveMap: ledTex, emissive: 0xff3300, emissiveIntensity: 2 }));
-            ledSignMesh.position.set(0, 10, 8.5);
-            scene.add(ledSignMesh);
-            ledSign = { canvas: ledCanvas, ctx: ledCtx, tex: ledTex, offset: 0 };
-
-            // Vending Machines
-            for(let i=-60; i<=60; i+=120) {
-                const machineGroup = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.BoxGeometry(4, 8.5, 3), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 }));
-                machineGroup.add(body);
-                const panel = new THREE.Mesh(new THREE.PlaneGeometry(3, 7.5), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00ffcc, emissiveIntensity: 2 }));
-                panel.position.set(0, 0, 1.51);
-                machineGroup.add(panel);
-                const light = new THREE.PointLight(0x00ffcc, 100, 10);
-                light.position.set(0, 0, 3);
-                machineGroup.add(light);
-                machineGroup.position.set(i + 20, 4.25, -8.5);
-                scene.add(machineGroup);
-                vendingMachines.push({ panel, light, phase: Math.random() * Math.PI });
-            }
-
-            // Security Cameras
-            for(let i=-180; i<=180; i+=60) {
-                const camGroup = new THREE.Group();
-                const mount = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1), steelMat); camGroup.add(mount);
-                const housing = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2), steelMat);
-                housing.rotation.x = Math.PI / 2.5; housing.position.z = 0.8; camGroup.add(housing);
-                const lens = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff0000, emissiveIntensity: 2 }));
-                lens.position.set(0, -0.4, 1.4); camGroup.add(lens);
-                camGroup.position.set(i, 11, -8.8);
-                scene.add(camGroup);
-                cameras.push(lens);
-            }
-
-            // Final Lights for Benches
-            for(let i=-60; i<=60; i+=40) {
-                if (i === 0) continue;
-                const bl = new THREE.PointLight(0xffffff, 50, 10);
-                bl.position.set(i, 8, -5);
-                scene.add(bl);
-            }
-
-            // --- DRONE SPAWNING ---
-            for(let i=0; i<5; i++) {
-                spawnDrone();
-            }
-
-            window.addEventListener('resize', onWindowResize, false);
-        }
-
-        // --- GAME CLASSES ---
-        
-        function spawnDrone() {
-            const drone = new Drone();
-            drones.push(drone);
-            scene.add(drone.mesh);
-        }
-
-        class Drone {
-            constructor() {
-                const geo = new THREE.OctahedronGeometry(0.6, 0);
-                const mat = new THREE.MeshStandardMaterial({ 
-                    color: 0x00ffcc, 
-                    emissive: 0x00ffcc, 
-                    emissiveIntensity: 5,
-                    metalness: 0.9,
-                    roughness: 0.1
-                });
-                this.mesh = new THREE.Mesh(geo, mat);
-                
-                // Random spawn around play area
-                this.mesh.position.set(
-                    Math.random() * 100 - 50,
-                    5 + Math.random() * 5,
-                    Math.random() * 10 - 5
-                );
-                
-                this.theta = Math.random() * Math.PI * 2;
-                this.phi = Math.random() * Math.PI;
-                this.orbitRadius = 15 + Math.random() * 10;
-                this.speed = 0.01 + Math.random() * 0.01;
-                this.lastShotTime = performance.now();
-                this.health = 2;
-            }
-
-            update(time, playerPos) {
-                // Orbiting behavior
-                this.theta += this.speed;
-                this.mesh.position.x = playerPos.x + Math.sin(this.theta) * this.orbitRadius;
-                this.mesh.position.z = playerPos.z + Math.cos(this.theta) * this.orbitRadius;
-                this.mesh.position.y = 6 + Math.sin(time * 0.5) * 2;
-                
-                this.mesh.rotation.y += 0.05;
-                this.mesh.rotation.x += 0.02;
-
-                // Fire at player
-                if (performance.now() - this.lastShotTime > 3000 + Math.random() * 2000) {
-                    this.shoot(playerPos);
-                    this.lastShotTime = performance.now();
-                }
-            }
-
-            shoot(targetPos) {
-                const bullet = new Bullet(this.mesh.position, targetPos, 0xff3300, false);
-                bullets.push(bullet);
-                scene.add(bullet.mesh);
-            }
-
-            takeDamage() {
-                this.health--;
-                if (this.health <= 0) {
-                    this.explode();
-                    return true;
-                }
-                return false;
-            }
-
-            explode() {
-                scene.remove(this.mesh);
-                killCount++;
-                document.getElementById('kill-value').innerText = killCount;
-                // Respawn
-                setTimeout(() => spawnDrone(), 5000);
-            }
-        }
-
+        // --- CLASSES (TOP) ---
         class Bullet {
-            constructor(startPos, targetPos, color, isPlayer) {
+            constructor(startPos, targetPos, color, isPlayer, controls, drones, playerDamage, scene) {
                 const geo = new THREE.SphereGeometry(0.1, 8, 8);
                 const mat = new THREE.MeshStandardMaterial({ 
                     color: color, 
@@ -626,49 +187,115 @@
                 this.speed = 0.8;
                 this.isPlayer = isPlayer;
                 this.startTime = performance.now();
-                this.maxLife = 5000; // 5 seconds
+                this.maxLife = 5000;
+                this.controls = controls;
+                this.drones = drones;
+                this.playerDamage = playerDamage;
+                this.scene = scene;
             }
 
             update() {
                 this.mesh.position.addScaledVector(this.direction, this.speed);
                 
-                // Collision with player
                 if (!this.isPlayer) {
-                    const dist = this.mesh.position.distanceTo(controls.getObject().position);
+                    const dist = this.mesh.position.distanceTo(this.controls.getObject().position);
                     if (dist < 1.0) {
-                        playerDamage(10);
-                        return true; // Destroy bullet
+                        this.playerDamage(10);
+                        return true;
                     }
                 } else {
-                    // Collision with drones
-                    for (let i = drones.length - 1; i >= 0; i--) {
-                        const d = drones[i];
+                    for (let i = this.drones.length - 1; i >= 0; i--) {
+                        const d = this.drones[i];
                         if (this.mesh.position.distanceTo(d.mesh.position) < 1.0) {
-                            if (d.takeDamage()) drones.splice(i, 1);
+                            if (d.takeDamage()) this.drones.splice(i, 1);
                             return true;
                         }
                     }
                 }
-
                 if (performance.now() - this.startTime > this.maxLife) return true;
                 return false;
             }
+        }
+
+        class Drone {
+            constructor(scene, spawnDrone, drones, bullets, controls, playerDamage) {
+                const geo = new THREE.OctahedronGeometry(0.6, 0);
+                const mat = new THREE.MeshStandardMaterial({ 
+                    color: 0x00ffcc, 
+                    emissive: 0x00ffcc, 
+                    emissiveIntensity: 5,
+                    metalness: 0.9,
+                    roughness: 0.1
+                });
+                this.mesh = new THREE.Mesh(geo, mat);
+                this.mesh.position.set(Math.random() * 100 - 50, 5 + Math.random() * 5, Math.random() * 10 - 5);
+                
+                this.theta = Math.random() * Math.PI * 2;
+                this.orbitRadius = 15 + Math.random() * 10;
+                this.speed = 0.01 + Math.random() * 0.01;
+                this.lastShotTime = performance.now();
+                this.health = 2;
+                this.scene = scene;
+                this.spawnDrone = spawnDrone;
+                this.drones = drones;
+                this.bullets = bullets;
+                this.controls = controls;
+                this.playerDamage = playerDamage;
+            }
+
+            update(time, playerPos) {
+                this.theta += this.speed;
+                this.mesh.position.x = playerPos.x + Math.sin(this.theta) * this.orbitRadius;
+                this.mesh.position.z = playerPos.z + Math.cos(this.theta) * this.orbitRadius;
+                this.mesh.position.y = 6 + Math.sin(time * 0.5) * 2;
+                this.mesh.rotation.y += 0.05;
+                this.mesh.rotation.x += 0.02;
+
+                if (performance.now() - this.lastShotTime > 3000 + Math.random() * 2000) {
+                    const bullet = new Bullet(this.mesh.position, playerPos, 0xff3300, false, this.controls, this.drones, this.playerDamage, this.scene);
+                    this.bullets.push(bullet);
+                    this.scene.add(bullet.mesh);
+                    this.lastShotTime = performance.now();
+                }
+            }
+
+            takeDamage() {
+                this.health--;
+                if (this.health <= 0) {
+                    this.scene.remove(this.mesh);
+                    const kv = document.getElementById('kill-value');
+                    kv.innerText = parseInt(kv.innerText) + 1;
+                    setTimeout(() => this.spawnDrone(), 5000);
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        // --- GLOBALS ---
+        let scene, camera, renderer, controls;
+        let neons = [], cameras = [], vendingMachines = [], ledSign;
+        let playerHealth = 100, isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
+        let velocity = new THREE.Vector3(), direction = new THREE.Vector3(), prevTime = performance.now();
+        let drones = [], bullets = [], lastFireTime = 0, joystickInput = { x: 0, y: 0 }, joystickTouchId = null;
+
+        function spawnDrone() {
+            const drone = new Drone(scene, spawnDrone, drones, bullets, controls, playerDamage);
+            drones.push(drone);
+            scene.add(drone.mesh);
         }
 
         function fireBullet() {
             const time = performance.now();
             if (time - lastFireTime < 250) return;
             lastFireTime = time;
-
             const startPos = controls.getObject().position.clone();
-            const direction = new THREE.Vector3();
-            camera.getWorldDirection(direction);
-            
-            // Adjust start position to be slightly in front of camera
-            startPos.addScaledVector(direction, 1);
-            
-            const targetPos = startPos.clone().addScaledVector(direction, 100);
-            const bullet = new Bullet(startPos, targetPos, 0x00ffcc, true);
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+            startPos.addScaledVector(dir, 1);
+            const targetPos = startPos.clone().addScaledVector(dir, 100);
+            const bullet = new Bullet(startPos, targetPos, 0x00ffcc, true, controls, drones, playerDamage, scene);
             bullets.push(bullet);
             scene.add(bullet.mesh);
         }
@@ -677,161 +304,157 @@
             playerHealth -= amt;
             if (playerHealth < 0) playerHealth = 0;
             document.getElementById('health-value').innerText = `${playerHealth} / 100`;
-            
-            // Visual feedback
             renderer.domElement.style.border = '5px solid red';
             setTimeout(() => renderer.domElement.style.border = 'none', 100);
-
-            if (playerHealth <= 0) {
-                alert("DECOMMISSIONED. REBOOTING SYSTEM.");
-                location.reload();
-            }
+            if (playerHealth <= 0) { alert("DECOMMISSIONED. REBOOTING SYSTEM."); location.reload(); }
         }
 
-        // --- MOBILE CONTROLS LOGIC ---
         function setupMobileJoystick() {
-            const base = document.getElementById('joystick-base');
-            const pad = document.getElementById('joystick-pad');
-            const baseRect = base.getBoundingClientRect();
-            const centerX = baseRect.left + baseRect.width / 2;
-            const centerY = baseRect.top + baseRect.height / 2;
-
-            base.addEventListener('touchstart', (e) => {
-                joystickTouchId = e.targetTouches[0].identifier;
-                handleJoystickMove(e.targetTouches[0]);
-            });
-
-            window.addEventListener('touchmove', (e) => {
-                if (joystickTouchId !== null) {
-                    for (let i = 0; i < e.changedTouches.length; i++) {
-                        if (e.changedTouches[i].identifier === joystickTouchId) {
-                            handleJoystickMove(e.changedTouches[i]);
-                        }
-                    }
-                }
-            });
-
-            window.addEventListener('touchend', (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    if (e.changedTouches[i].identifier === joystickTouchId) {
-                        joystickTouchId = null;
-                        joystickInput = { x: 0, y: 0 };
-                        pad.style.left = '50%';
-                        pad.style.top = '50%';
-                    }
-                }
-            });
-
-            function handleJoystickMove(touch) {
-                const dx = touch.pageX - centerX;
-                const dy = touch.pageY - centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const maxRadius = baseRect.width / 2;
-                
-                const angle = Math.atan2(dy, dx);
-                const clampedDist = Math.min(distance, maxRadius);
-                
-                const lx = Math.cos(angle) * clampedDist;
-                const ly = Math.sin(angle) * clampedDist;
-                
-                pad.style.left = `calc(50% + ${lx}px)`;
-                pad.style.top = `calc(50% + ${ly}px)`;
-                
-                joystickInput.x = lx / maxRadius;
-                joystickInput.y = ly / maxRadius;
+            const base = document.getElementById('joystick-base'), pad = document.getElementById('joystick-pad');
+            const rect = base.getBoundingClientRect(), cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            base.addEventListener('touchstart', (e) => { joystickTouchId = e.targetTouches[0].identifier; handleMove(e.targetTouches[0]); });
+            window.addEventListener('touchmove', (e) => { if (joystickTouchId !== null) { for (let t of e.changedTouches) if (t.identifier === joystickTouchId) handleMove(t); } });
+            window.addEventListener('touchend', (e) => { for (let t of e.changedTouches) if (t.identifier === joystickTouchId) { joystickTouchId = null; joystickInput = { x: 0, y: 0 }; pad.style.left = '50%'; pad.style.top = '50%'; } });
+            function handleMove(t) {
+                const dx = t.pageX - cx, dy = t.pageY - cy, dist = Math.sqrt(dx*dx + dy*dy), max = rect.width / 2;
+                const angle = Math.atan2(dy, dx), cd = Math.min(dist, max);
+                const lx = Math.cos(angle) * cd, ly = Math.sin(angle) * cd;
+                pad.style.left = `calc(50% + ${lx}px)`; pad.style.top = `calc(50% + ${ly}px)`;
+                joystickInput.x = lx / max; joystickInput.y = ly / max;
             }
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020202);
+            scene.fog = new THREE.FogExp2(0x020202, 0.02);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 0);
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 2.8;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new PointerLockControls(camera, document.body);
+            document.getElementById('overlay').addEventListener('click', () => controls.lock());
+            controls.addEventListener('lock', () => document.getElementById('overlay').style.display = 'none');
+            controls.addEventListener('unlock', () => document.getElementById('overlay').style.display = 'flex');
+            scene.add(controls.getObject());
+
+            document.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = true; break; case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break; case 'KeyD': moveRight = true; break;
+                    case 'Space': if(canJump) { velocity.y += 25; canJump = false; } break;
+                }
+            });
+            document.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': moveForward = false; break; case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break; case 'KeyD': moveRight = false; break;
+                }
+            });
+            document.addEventListener('mousedown', () => { if(controls.isLocked) fireBullet(); });
+
+            if (isMobile) {
+                document.getElementById('mobile-controls').style.display = 'block';
+                setupMobileJoystick();
+                document.getElementById('fire-button').addEventListener('touchstart', (e) => { e.preventDefault(); fireBullet(); });
+                let lx = 0, ly = 0;
+                renderer.domElement.addEventListener('touchstart', (e) => { if(e.target.id.includes('joystick') || e.target.id === 'fire-button') return; lx = e.touches[0].pageX; ly = e.touches[0].pageY; });
+                renderer.domElement.addEventListener('touchmove', (e) => {
+                    if(e.target.id.includes('joystick') || e.target.id === 'fire-button') return;
+                    camera.rotation.y -= (e.touches[0].pageX - lx) * 0.005;
+                    camera.rotation.x -= (e.touches[0].pageY - ly) * 0.005;
+                    lx = e.touches[0].pageX; ly = e.touches[0].pageY;
+                    camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+                }, { passive: false });
+            }
+
+            // Environment
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 40), new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.15, metalness: 0.8 }));
+            floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
+            const puddleMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0, metalness: 1, transparent: true, opacity: 0.7 });
+            for(let i=0; i<15; i++) {
+                const p = new THREE.Mesh(new THREE.CircleGeometry(Math.random()*4+1, 32), puddleMat);
+                p.rotation.x = -Math.PI/2; p.position.set(Math.random()*160-80, 0.01, Math.random()*15-5); p.scale.set(1.5, 1, 1); scene.add(p);
+            }
+            const strip = new THREE.Mesh(new THREE.PlaneGeometry(200, 1.5), new THREE.MeshStandardMaterial({ color: 0xffcc00 }));
+            strip.rotation.x = -Math.PI/2; strip.position.set(0, 0.02, 9); scene.add(strip);
+            
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a });
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(200, 18, 2), wallMat); backWall.position.set(0, 8.5, -10); scene.add(backWall);
+
+            const steelMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 1, roughness: 0.3 });
+            for(let i=-80; i<=80; i+=40) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(2.5, 12, 2.5), steelMat); p.position.set(i, 5.5, 6); scene.add(p);
+            }
+
+            const oakMat = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
+            for(let i=-60; i<=60; i+=40) {
+                if(i===0) continue;
+                const g = new THREE.Group();
+                const s = new THREE.Mesh(new THREE.BoxGeometry(6, 0.4, 2), oakMat); s.position.y = 1.2; g.add(s);
+                const b = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 0.3), oakMat); b.position.set(0, 2, -0.9); g.add(b);
+                g.position.set(i, 0, -5); scene.add(g);
+                const l = new THREE.PointLight(0xffffff, 50, 10); l.position.set(i, 8, -5); scene.add(l);
+            }
+
+            const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(200, 60), new THREE.MeshStandardMaterial({ color: 0x080808 }));
+            ceiling.rotation.x = Math.PI/2; ceiling.position.set(0, 12, 10); scene.add(ceiling);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+            for(let i=-80; i<=80; i+=40) {
+                const g = new THREE.Group();
+                const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 12), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 10 }));
+                tube.rotation.z = Math.PI/2; g.add(tube);
+                const l = new THREE.PointLight(0xffffff, 600, 50, 2); l.position.y = -1; g.add(l);
+                g.position.set(i, 11.5, 2); scene.add(g);
+                neons.push({ light: l, tube, base: 600 });
+            }
+
+            for(let i=0; i<5; i++) spawnDrone();
+
+            const ledCanvas = document.createElement('canvas'); ledCanvas.width = 1024; ledCanvas.height = 128;
+            const ledCtx = ledCanvas.getContext('2d'); const ledTex = new THREE.CanvasTexture(ledCanvas);
+            const ls = new THREE.Mesh(new THREE.BoxGeometry(10, 1.2, 0.4), new THREE.MeshStandardMaterial({ map: ledTex, emissiveMap: ledTex, emissive: 0xff3300, emissiveIntensity: 2 }));
+            ls.position.set(0, 10, 8.5); scene.add(ls);
+            ledSign = { canvas: ledCanvas, ctx: ledCtx, tex: ledTex, offset: 0 };
+
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            const time = performance.now() * 0.001;
-            const delta = (performance.now() - prevTime) / 1000;
-
-            // --- MOVEMENT ---
-            velocity.x -= velocity.x * 10.0 * delta;
-            velocity.z -= velocity.z * 10.0 * delta;
-            velocity.y -= 9.8 * 10.0 * delta; // Gravity
-
-            direction.z = Number(moveForward) - Number(moveBackward);
-            direction.x = Number(moveRight) - Number(moveLeft);
-            direction.normalize();
-
-            // Mobile joystick override
-            if (isMobile && (Math.abs(joystickInput.x) > 0.1 || Math.abs(joystickInput.y) > 0.1)) {
-                direction.z = -joystickInput.y;
-                direction.x = joystickInput.x;
-            }
-
-            if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-            if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
-            if (isMobile) {
-                velocity.z -= direction.z * 400.0 * delta;
-                velocity.x -= direction.x * 400.0 * delta;
-            }
-
-            controls.moveRight(-velocity.x * delta);
-            controls.moveForward(-velocity.z * delta);
-
-            controls.getObject().position.y += (velocity.y * delta);
-
-            if (controls.getObject().position.y < 4) { // Player height 1.6m approx
-                velocity.y = 0;
-                controls.getObject().position.y = 4;
-                canJump = true;
-            }
-
-            // --- GAME UPDATES ---
-            const playerPos = controls.getObject().position;
-            
-            drones.forEach(d => d.update(time, playerPos));
-            
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                if (bullets[i].update()) {
-                    scene.remove(bullets[i].mesh);
-                    bullets.splice(i, 1);
-                }
-            }
-
-            // --- ENVIRONMENT ANIMATION ---
-            neons.forEach(n => {
-                if(Math.random() > 0.99) {
-                    n.light.intensity = n.baseInt * 0.2;
-                    n.tube.material.emissiveIntensity = 2;
-                    setTimeout(() => {
-                        n.light.intensity = n.baseInt;
-                        n.tube.material.emissiveIntensity = 10;
-                    }, 50 + Math.random() * 100);
-                }
-            });
-            clocks.forEach(face => {
-                face.material.emissiveIntensity = 3 + (Math.sin(time * 2) + 1) * 4;
-            });
-            cameras.forEach(lens => {
-                lens.material.emissiveIntensity = 1 + (Math.sin(time * 3) + 1) * 2;
-            });
-            vendingMachines.forEach(v => {
-                const p = (Math.sin(time * 0.5 + v.phase) + 1) * 0.5;
-                v.panel.material.emissiveIntensity = 1 + p * 3;
-                v.light.intensity = 50 + p * 100;
-            });
-            if(ledSign) {
-                ledSign.offset -= 3;
-                if(ledSign.offset < -2000) ledSign.offset = 1024;
-                ledSign.ctx.fillStyle = '#000'; ledSign.ctx.fillRect(0,0,1024,128);
-                ledSign.ctx.fillStyle = '#ff3300'; ledSign.ctx.font = 'bold 70px Courier New';
-                ledSign.ctx.fillText('STATION 402 - DELAYED - CHECK NETWORK STATUS - TRACKS CLEAR - ', ledSign.offset, 90);
-                ledSign.tex.needsUpdate = true;
-            }
-            scene.fog.density = 0.02 * (1.5 / renderer.toneMappingExposure);
-
-            renderer.render(scene, camera);
+            const time = performance.now() * 0.001, delta = Math.min((performance.now() - prevTime) / 1000, 0.1);
             prevTime = performance.now();
+            if(!controls) return;
+
+            velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta; velocity.y -= 9.8 * 10 * delta;
+            direction.z = Number(moveForward) - Number(moveBackward); direction.x = Number(moveRight) - Number(moveLeft);
+            direction.normalize();
+            if(isMobile && (Math.abs(joystickInput.x) > 0.1 || Math.abs(joystickInput.y) > 0.1)) { direction.z = -joystickInput.y; direction.x = joystickInput.x; }
+            if(moveForward || moveBackward || (isMobile && Math.abs(joystickInput.y) > 0.1)) velocity.z -= direction.z * 400 * delta;
+            if(moveLeft || moveRight || (isMobile && Math.abs(joystickInput.x) > 0.1)) velocity.x -= direction.x * 400 * delta;
+
+            controls.moveRight(-velocity.x * delta); controls.moveForward(-velocity.z * delta);
+            controls.getObject().position.y += velocity.y * delta;
+            if(controls.getObject().position.y < 4) { velocity.y = 0; controls.getObject().position.y = 4; canJump = true; }
+
+            const pPos = controls.getObject().position;
+            drones.forEach(d => d.update(time, pPos));
+            for(let i=bullets.length-1; i>=0; i--) if(bullets[i].update()) { scene.remove(bullets[i].mesh); bullets.splice(i, 1); }
+
+            neons.forEach(n => { if(Math.random() > 0.99) { n.light.intensity = n.base * 0.2; setTimeout(() => n.light.intensity = n.base, 100); } });
+            if(ledSign) {
+                ledSign.offset -= 3; if(ledSign.offset < -2000) ledSign.offset = 1024;
+                ledSign.ctx.fillStyle = '#000'; ledSign.ctx.fillRect(0,0,1024,128); ledSign.ctx.fillStyle = '#ff3300'; ledSign.ctx.font = 'bold 70px Courier';
+                ledSign.ctx.fillText('STATION 402 - TACTICAL LINK ACTIVE - WATCH FOR DRONES - ', ledSign.offset, 90); ledSign.tex.needsUpdate = true;
+            }
+            renderer.render(scene, camera);
         }
 
         init();
