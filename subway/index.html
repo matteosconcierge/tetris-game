@@ -221,16 +221,15 @@
 
         class Drone {
             constructor(scene, drones, bullets, controls, playerDamage, spawnCallback) {
-                const geo = new THREE.OctahedronGeometry(0.6, 0);
-                const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 5, metalness: 0.9, roughness: 0.1 });
+                const geo = new THREE.OctahedronGeometry(0.5, 0);
+                const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 3, metalness: 0.9, roughness: 0.1 });
                 this.mesh = new THREE.Mesh(geo, mat);
-                // Confined spawn: within platform length and visible width
-                // Confined spawn: strictly within platform length (X) and away from back wall (Z)
-                // Front of the back wall is at Z: -9. Platform ends at Z: 9.
-                this.mesh.position.set(Math.random()*160-80, 5+Math.random()*4, -5 + Math.random()*12);
-                this.theta = Math.random() * Math.PI * 2;
-                this.orbitRadius = 3 + Math.random() * 4; // Much smaller orbit to stay visible and in-bounds
-                this.speed = 0.01 + Math.random() * 0.01;
+                this.mesh.position.set(Math.random()*160-80, 5+Math.random()*4, -4 + (Math.random()*10));
+                
+                this.targetPos = new THREE.Vector3().copy(this.mesh.position);
+                this.lastTargetTime = 0;
+                this.orbitAngle = Math.random() * Math.PI * 2;
+                
                 this.lastShotTime = performance.now();
                 this.health = 2;
                 this.scene = scene;
@@ -241,17 +240,26 @@
                 this.spawnCallback = spawnCallback;
             }
             update(time, playerPos) {
-                this.theta += this.speed;
-                // Confine drone movement to platform area [x: -90 to 90, z: -8.5 to 8.5]
-                // Back wall starts at -9, Train at 9+.
-                let targetX = playerPos.x + Math.sin(this.theta) * this.orbitRadius;
-                let targetZ = playerPos.z + Math.cos(this.theta) * this.orbitRadius;
+                // Update target based on player but with inertia/smoothing
+                if (performance.now() - this.lastTargetTime > 2000) {
+                    this.orbitAngle += 0.5 + Math.random();
+                    const dist = 6 + Math.random() * 6;
+                    this.targetPos.set(
+                        playerPos.x + Math.sin(this.orbitAngle) * dist,
+                        5 + Math.random() * 3,
+                        Math.max(-7.5, Math.min(7.5, playerPos.z + Math.cos(this.orbitAngle) * dist))
+                    );
+                    this.lastTargetTime = performance.now();
+                }
+
+                // Lerp towards target for fluid, non-exact movement
+                this.mesh.position.lerp(this.targetPos, 0.02);
+                this.mesh.position.y += Math.sin(time * 2) * 0.005; // Gentle bobbing
                 
-                this.mesh.position.x = Math.max(-90, Math.min(90, targetX));
-                this.mesh.position.z = Math.max(-8.5, Math.min(8.5, targetZ));
-                this.mesh.position.y = 6 + Math.sin(time * 0.5) * 2;
-                this.mesh.rotation.y += 0.05; this.mesh.rotation.x += 0.02;
-                if (performance.now() - this.lastShotTime > 3000 + Math.random() * 2000) {
+                this.mesh.rotation.y += 0.04; 
+                this.mesh.rotation.x += 0.02;
+
+                if (performance.now() - this.lastShotTime > 4000 + Math.random() * 2000) {
                     const bullet = new Bullet(this.mesh.position, playerPos, 0xff3300, false, this.scene, this.controls, this.drones, this.playerDamage);
                     this.bullets.push(bullet);
                     this.scene.add(bullet.mesh);
@@ -580,7 +588,7 @@
             if(ledSign) {
                 ledSign.offset -= 3; if(ledSign.offset < -2000) ledSign.offset = 1024;
                 ledSign.ctx.fillStyle = '#000'; ledSign.ctx.fillRect(0,0,1024,128); ledSign.ctx.fillStyle = '#ff3300'; ledSign.ctx.font = 'bold 70px Courier';
-                ledSign.ctx.fillText('STATION 402 - TACTICAL LINK ACTIVE - WATCH FOR DRONES - ', ledSign.offset, 90); ledSign.tex.needsUpdate = true;
+                ledSign.ctx.fillText('STATION 402 - LINK STABLE - INERTIAL DRONE PATROL ACTIVE - ', ledSign.offset, 90); ledSign.tex.needsUpdate = true;
             }
             
             renderer.render(scene, camera);
