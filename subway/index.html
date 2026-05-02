@@ -225,9 +225,11 @@
                 const mat = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 5, metalness: 0.9, roughness: 0.1 });
                 this.mesh = new THREE.Mesh(geo, mat);
                 // Confined spawn: within platform length and visible width
-                this.mesh.position.set(Math.random()*160-80, 5+Math.random()*4, Math.random()*14-7);
+                // Confined spawn: strictly within platform length (X) and away from back wall (Z)
+                // Front of the back wall is at Z: -9. Platform ends at Z: 9.
+                this.mesh.position.set(Math.random()*160-80, 5+Math.random()*4, -5 + Math.random()*12);
                 this.theta = Math.random() * Math.PI * 2;
-                this.orbitRadius = 5 + Math.random() * 8; // Smaller orbit to stay within view
+                this.orbitRadius = 3 + Math.random() * 4; // Much smaller orbit to stay visible and in-bounds
                 this.speed = 0.01 + Math.random() * 0.01;
                 this.lastShotTime = performance.now();
                 this.health = 2;
@@ -240,12 +242,13 @@
             }
             update(time, playerPos) {
                 this.theta += this.speed;
-                // Confine drone movement to station bounds [x: -90 to 90, z: -8 to 8]
+                // Confine drone movement to platform area [x: -90 to 90, z: -8.5 to 8.5]
+                // Back wall starts at -9, Train at 9+.
                 let targetX = playerPos.x + Math.sin(this.theta) * this.orbitRadius;
                 let targetZ = playerPos.z + Math.cos(this.theta) * this.orbitRadius;
                 
                 this.mesh.position.x = Math.max(-90, Math.min(90, targetX));
-                this.mesh.position.z = Math.max(-8, Math.min(8, targetZ));
+                this.mesh.position.z = Math.max(-8.5, Math.min(8.5, targetZ));
                 this.mesh.position.y = 6 + Math.sin(time * 0.5) * 2;
                 this.mesh.rotation.y += 0.05; this.mesh.rotation.x += 0.02;
                 if (performance.now() - this.lastShotTime > 3000 + Math.random() * 2000) {
