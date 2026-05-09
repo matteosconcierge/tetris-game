@@ -60,12 +60,20 @@ function init() {
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
 
-    document.getElementById('start-button').onclick = startRace;
-    document.getElementById('restart-button').onclick = () => location.reload();
+    const startBtn = document.getElementById('start-button');
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            console.log('Start button clicked');
+            startRace();
+        });
+    }
 
-    // Mobile controls
+    const restartBtn = document.getElementById('restart-button');
+    if (restartBtn) {
+        restartBtn.addEventListener('click', () => location.reload());
+    }
+
     setupMobileControls();
-
     animate();
 }
 
