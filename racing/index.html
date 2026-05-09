@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Night Racer - Cyberpunk 3D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="hud">
+            <div id="score-label">SCORE: <span id="score">0</span></div>
+            <div id="speed-label">SPEED: <span id="speed">0</span> km/h</div>
+        </div>
+
+        <div id="ui-overlay">
+            <div id="start-screen" class="center-ui">
+                <h1 class="neon-text">NIGHT RACER</h1>
+                <p>Avoid RED obstacles | Collect BLUE power-ups</p>
+                <button id="start-button" class="neon-button">START ENGINE</button>
+                <div class="controls-hint">
+                    <p>PC: Arrow Keys / WASD</p>
+                    <p>Mobile: On-screen buttons</p>
+                </div>
+            </div>
+
+            <div id="game-over-screen" class="center-ui hidden">
+                <h1 class="neon-text">CRASHED</h1>
+                <p>Final Score: <span id="final-score">0</span></p>
+                <button id="restart-button" class="neon-button">RETRY</button>
+            </div>
+        </div>
+
+        <div id="mobile-controls">
+            <button id="left-btn" class="ctrl-btn">◀</button>
+            <button id="right-btn" class="ctrl-btn">▶</button>
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
