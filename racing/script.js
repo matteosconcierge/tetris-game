@@ -255,12 +255,15 @@ function setupCars() {
     };
     participants.push(playerCar);
 
-    // Start position
+    // Correct Start position and alignment
     const startPoint = trackCurve.getPoint(0);
-    const startTangent = trackCurve.getTangent(0);
-    pMesh.position.copy(startPoint);
-    pMesh.lookAt(startPoint.clone().add(startTangent));
-    pMesh.position.x += 4; // Side of the track
+    const startTangent = trackCurve.getTangent(0).normalize();
+    const startRotation = Math.atan2(startTangent.x, startTangent.z);
+    const right = new THREE.Vector3().crossVectors(startTangent, new THREE.Vector3(0, 1, 0)).normalize();
+
+    playerCar.rotation = startRotation;
+    playerCar.mesh.rotation.y = startRotation;
+    playerCar.mesh.position.copy(startPoint).add(right.clone().multiplyScalar(4));
 
     // AI
     for (let i = 0; i < NUM_AI; i++) {
@@ -278,9 +281,8 @@ function setupCars() {
         aiCars.push(ai);
         participants.push(ai);
 
-        aiMesh.position.copy(startPoint);
-        aiMesh.lookAt(startPoint.clone().add(startTangent));
-        aiMesh.position.x += ai.offset;
+        aiMesh.rotation.y = startRotation;
+        aiMesh.position.copy(startPoint).add(right.clone().multiplyScalar(ai.offset));
     }
 }
 
