@@ -21,6 +21,13 @@ body {
     font-family: var(--font-main);
 }
 
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
 #game-container {
     width: 100vw;
     height: 100vh;

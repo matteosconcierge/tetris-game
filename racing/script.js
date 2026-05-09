@@ -35,6 +35,25 @@ let speedLines;
 
 // --- INITIALIZATION ---
 function init() {
+    // 1. Initialize clock
+    clock = new THREE.Clock();
+
+    // 2. Immediate event binding with explicit z-index
+    const startBtn = document.getElementById('start-button');
+    if (startBtn) {
+        startBtn.style.pointerEvents = 'auto';
+        startBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startRace();
+        };
+    }
+
+    const restartBtn = document.getElementById('restart-button');
+    if (restartBtn) {
+        restartBtn.onclick = () => location.reload();
+    }
+
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050510);
     scene.fog = new THREE.FogExp2(0x050510, 0.002);
@@ -47,8 +66,6 @@ function init() {
     renderer.shadowMap.enabled = true;
     document.getElementById('game-container').appendChild(renderer.domElement);
 
-    clock = new THREE.Clock();
-
     setupLights();
     setupEnvironment();
     createTrack();
@@ -59,20 +76,6 @@ function init() {
     window.addEventListener('keydown', (e) => keys[e.code] = true);
     window.addEventListener('keyup', (e) => keys[e.code] = false);
     window.addEventListener('resize', onWindowResize);
-
-    const startBtn = document.getElementById('start-button');
-    if (startBtn) {
-        startBtn.addEventListener('click', () => {
-            console.log('Start button clicked');
-            startRace();
-        });
-    }
-
-    const restartBtn = document.getElementById('restart-button');
-    if (restartBtn) {
-        restartBtn.addEventListener('click', () => location.reload());
-    }
-
     setupMobileControls();
     animate();
 }
