@@ -20,6 +20,8 @@ const CAR_COLORS = [0x00f2ff, 0xff0055, 0x00ff44, 0xffaa00];
 const MAX_LAPS = 3;
 const NUM_AI = 3;
 const TRACK_SURFACE_Y = 0.34; // top of the flattened tube track; keeps wheels visually on asphalt
+const CHECKPOINT_RADIUS = 20;
+const CHECKPOINT_MISS_GRACE = 0.035; // wait until the car is clearly past the ring before failing
 
 // --- STATE MANAGEMENT ---
 let scene, camera, renderer, clock;
@@ -745,8 +747,10 @@ function updateProgress(car) {
     if (car.isPlayer) {
         checkpoints.forEach(cp => {
             if (!cp.passed) {
-                const dist = car.mesh.position.distanceTo(cp.pos);
-                if (dist < 15) { // Collection radius
+                const dx = car.mesh.position.x - cp.pos.x;
+                const dz = car.mesh.position.z - cp.pos.z;
+                const dist = Math.hypot(dx, dz);
+                if (dist < CHECKPOINT_RADIUS) {
                     cp.passed = true;
                     cp.mesh.material.color.set(0xffffff); // Turn white when passed
                     cp.mesh.material.emissive.set(0xffffff);
@@ -763,7 +767,11 @@ function updateProgress(car) {
             return checkpointT > from || checkpointT <= to;
         };
 
-        const missed = checkpoints.find(cp => !cp.passed && crossedForward(previousT, closestT, cp.t));
+        const missed = checkpoints.find(cp => {
+            if (cp.passed) return false;
+            const deadlineT = (cp.t + CHECKPOINT_MISS_GRACE) % 1;
+            return crossedForward(previousT, closestT, deadlineT);
+        });
         if (missed) {
             missed.mesh.material.color.set(0xff0055);
             missed.mesh.material.emissive.set(0xff0055);
