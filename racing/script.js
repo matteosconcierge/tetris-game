@@ -19,6 +19,7 @@ const trackCurve = new THREE.CatmullRomCurve3(TRACK_POINTS, true);
 const CAR_COLORS = [0x00f2ff, 0xff0055, 0x00ff44, 0xffaa00];
 const MAX_LAPS = 3;
 const NUM_AI = 3;
+const TRACK_SURFACE_Y = 0.34; // top of the flattened tube track; keeps wheels visually on asphalt
 
 // --- STATE MANAGEMENT ---
 let scene, camera, renderer, clock;
@@ -581,6 +582,7 @@ function setupCars() {
     playerCar.rotation = startRotation;
     playerCar.mesh.rotation.y = startRotation;
     playerCar.mesh.position.copy(startPoint).add(right.clone().multiplyScalar(4));
+    playerCar.mesh.position.y = TRACK_SURFACE_Y;
 
     // AI
     for (let i = 0; i < NUM_AI; i++) {
@@ -600,6 +602,7 @@ function setupCars() {
 
         aiMesh.rotation.y = startRotation;
         aiMesh.position.copy(startPoint).add(right.clone().multiplyScalar(ai.offset));
+        aiMesh.position.y = TRACK_SURFACE_Y;
     }
 
     // Set initial camera position immediately to avoid starting at (0,0,0) [prevent black screen]
@@ -708,7 +711,10 @@ function updateAI(dt) {
         const tangent = trackCurve.getTangentAt(ai.progress % 1);
         
         ai.mesh.position.copy(point);
-        ai.mesh.lookAt(point.clone().add(tangent));
+        ai.mesh.position.y = TRACK_SURFACE_Y;
+        const lookTarget = point.clone().add(tangent);
+        lookTarget.y = TRACK_SURFACE_Y;
+        ai.mesh.lookAt(lookTarget);
         
         // Offset from center
         const right = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
