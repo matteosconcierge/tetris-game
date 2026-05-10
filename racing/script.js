@@ -34,7 +34,7 @@ let checkpoints = [];
 let speedLines;
 
 // --- INITIALIZATION ---
-function init() {
+export function init() {
     // 1. Initialize clock
     clock = new THREE.Clock();
 
@@ -55,16 +55,17 @@ function init() {
     }
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050510);
+    scene.background = new THREE.Color(0x1a1a2a); // Slightly brighter blue
     scene.fog = new THREE.FogExp2(0x050510, 0.002);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
     
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", alpha: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = false; 
     document.getElementById('game-container').appendChild(renderer.domElement);
+    renderer.domElement.style.display = 'block';
 
     setupLights();
     setupEnvironment();
@@ -78,6 +79,11 @@ function init() {
     window.addEventListener('resize', onWindowResize);
     setupMobileControls();
     animate();
+
+    // Important: Force a resize check after a short delay for mobile browsers
+    setTimeout(() => {
+        onWindowResize();
+    }, 100);
 }
 
 function setupSpeedLines() {
@@ -135,6 +141,11 @@ function updateSpeedLines() {
 }
 
 function setupMobileControls() {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isMobile) {
+        document.getElementById('mobile-controls').classList.remove('hidden');
+    }
+
     const btns = {
         'btn-left': 'KeyA',
         'btn-right': 'KeyD',
@@ -152,7 +163,7 @@ function setupMobileControls() {
 }
 
 function setupLights() {
-    const ambient = new THREE.AmbientLight(0xffffff, 0.2);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambient);
 
     const sun = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -357,12 +368,11 @@ function createTrack() {
     
     // Create road geometry
     const trackGeo = new THREE.TubeGeometry(trackCurve, segments, trackWidth, 8, true);
-    const trackMat = new THREE.MeshPhysicalMaterial({ 
+    const trackMat = new THREE.MeshStandardMaterial({ 
         color: 0x222222,
         map: asphaltTex,
         roughness: 0.8,
-        metalness: 0.2,
-        clearcoat: 0.1
+        metalness: 0.2
     });
     const track = new THREE.Mesh(trackGeo, trackMat);
     track.scale.y = 0.02; 
@@ -406,22 +416,19 @@ function createTrack() {
 function createCar(color, isPlayer = false) {
     const group = new THREE.Group();
 
-    const bodyMat = new THREE.MeshPhysicalMaterial({ 
+    const bodyMat = new THREE.MeshStandardMaterial({ 
         color: color, 
         metalness: 0.6, 
-        roughness: 0.2,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.1,
-        reflectivity: 1.0
+        roughness: 0.2
     });
 
     const blackMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 });
-    const glassMat = new THREE.MeshPhysicalMaterial({ 
+    const glassMat = new THREE.MeshStandardMaterial({ 
         color: 0x000000, 
         metalness: 1.0, 
-        roughness: 0,
-        transmission: 0.5,
-        transparent: true
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.8
     });
 
     // Main Body (lower)
@@ -577,6 +584,12 @@ function setupCars() {
         aiMesh.rotation.y = startRotation;
         aiMesh.position.copy(startPoint).add(right.clone().multiplyScalar(ai.offset));
     }
+
+    // Set initial camera position immediately to avoid starting at (0,0,0) [prevent black screen]
+    const initialOffset = new THREE.Vector3(0, 4, -10);
+    initialOffset.applyQuaternion(playerCar.mesh.quaternion);
+    camera.position.copy(playerCar.mesh.position).add(initialOffset);
+    camera.lookAt(playerCar.mesh.position);
 }
 
 function setupCheckpoints() {
@@ -728,6 +741,16 @@ function startRace() {
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('ui-overlay').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
+    
+    // Trigger a resize when the race starts to ensure canvas covers screen
+    onWindowResize();
+
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    console.log("Mobile controls check:", isMobile);
+    if (isMobile) {
+        document.getElementById('mobile-controls').classList.remove('hidden');
+    }
+
     clock.start();
 }
 
@@ -750,9 +773,13 @@ function finishRace(winner) {
 }
 
 function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    if (width === 0 || height === 0) return;
+    
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(width, height);
 }
 
 function animate() {
@@ -787,5 +814,3 @@ function animate() {
 
     renderer.render(scene, camera);
 }
-
-init();
