@@ -28,6 +28,8 @@ let participants = []; // { mesh, isPlayer, progress, lap, lastPos }
 let gameState = 'START'; // START, RACING, FINISHED
 let keys = {};
 let checkpoints = [];
+let lastFrameTime = null;
+let gameTime = 0;
 
 // --- UTILS ---
 
@@ -695,7 +697,7 @@ function updateAI(dt) {
 
     aiCars.forEach((ai, index) => {
         // AI follows the spline
-        ai.progress += (ai.speed * 0.001) * deltaFactor * (1 + Math.sin(clock.elapsedTime + index) * 0.1); 
+        ai.progress += (ai.speed * 0.001) * deltaFactor * (1 + Math.sin(gameTime + index) * 0.1); 
         if (ai.progress >= 1) {
             ai.progress = 0;
             ai.lap++;
@@ -798,6 +800,8 @@ function getOrdinal(n) {
 
 function startRace() {
     gameState = 'RACING';
+    lastFrameTime = null;
+    gameTime = 0;
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('ui-overlay').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
@@ -852,11 +856,21 @@ function onWindowResize() {
     renderer.setSize(width, height);
 }
 
-function animate() {
+function animate(timestamp = 0) {
     requestAnimationFrame(animate);
-    
-    let dt = clock.getDelta();
-    if (dt > 0.1) dt = 0.1; // Limit spike
+
+    // Use the requestAnimationFrame timestamp instead of THREE.Clock for gameplay.
+    // Brave's privacy/timer behavior can make Clock-derived deltas inconsistent;
+    // rAF timestamps stay aligned with the actual browser paint loop.
+    let dt = 1 / 60;
+    if (lastFrameTime !== null) {
+        dt = (timestamp - lastFrameTime) / 1000;
+    }
+    lastFrameTime = timestamp;
+
+    // Avoid giant jumps after tab switches, but keep enough catch-up for low FPS.
+    dt = Math.min(Math.max(dt, 1 / 240), 1 / 15);
+    gameTime += dt;
     
     // Pass dt to updates
     updatePlayer(dt);
