@@ -629,31 +629,35 @@ function setupCheckpoints() {
 function updatePlayer(dt) {
     if (gameState !== 'RACING') return;
 
+    // Normalize factor: at 60fps (dt ≈ 0.0166), deltaFactor ≈ 1.0
+    const deltaFactor = dt * 60;
+
     // Movement logic
     if (keys['KeyW'] || keys['ArrowUp']) {
-        playerCar.speed += playerCar.accel;
+        playerCar.speed += playerCar.accel * deltaFactor;
     } else if (keys['KeyS'] || keys['ArrowDown']) {
-        playerCar.speed -= playerCar.accel * 1.5;
+        playerCar.speed -= playerCar.accel * 1.5 * deltaFactor;
     } else {
-        playerCar.speed *= playerCar.friction;
+        // Framerate independent friction (approximate)
+        playerCar.speed *= Math.pow(playerCar.friction, deltaFactor);
     }
 
     // Handbrake
-    if (keys['Space']) playerCar.speed *= 0.95;
+    if (keys['Space']) playerCar.speed *= Math.pow(0.95, deltaFactor);
 
     playerCar.speed = Math.max(-0.2, Math.min(playerCar.speed, playerCar.maxSpeed));
 
     // Steering
     const steerLimit = 0.04 / (1 + playerCar.speed * 2);
     if (keys['KeyA'] || keys['ArrowLeft']) {
-        playerCar.rotation += playerCar.speed * steerLimit;
+        playerCar.rotation += (playerCar.speed * steerLimit) * deltaFactor;
     }
     if (keys['KeyD'] || keys['ArrowRight']) {
-        playerCar.rotation -= playerCar.speed * steerLimit;
+        playerCar.rotation -= (playerCar.speed * steerLimit) * deltaFactor;
     }
 
     // Apply transformation
-    playerCar.mesh.translateZ(playerCar.speed);
+    playerCar.mesh.translateZ(playerCar.speed * deltaFactor);
     playerCar.mesh.rotation.y = playerCar.rotation;
 
     // Track progress for HUD/Position
@@ -667,9 +671,11 @@ function updatePlayer(dt) {
 function updateAI(dt) {
     if (gameState !== 'RACING') return;
 
+    const deltaFactor = dt * 60;
+
     aiCars.forEach((ai, index) => {
         // AI follows the spline
-        ai.progress += ai.speed * 0.001 * (1 + Math.sin(clock.elapsedTime + index) * 0.1); 
+        ai.progress += (ai.speed * 0.001) * deltaFactor * (1 + Math.sin(clock.elapsedTime + index) * 0.1); 
         if (ai.progress >= 1) {
             ai.progress = 0;
             ai.lap++;
