@@ -794,8 +794,11 @@ function onWindowResize() {
 
 function animate() {
     requestAnimationFrame(animate);
-    const dt = clock.getDelta();
-
+    
+    let dt = clock.getDelta();
+    if (dt > 0.1) dt = 0.1; // Limit spike
+    
+    // Pass dt to updates
     updatePlayer(dt);
     updateAI(dt);
     updateLeaderboard();
@@ -805,20 +808,24 @@ function animate() {
     if (playerCar) {
         const speedFactor = playerCar.speed / playerCar.maxSpeed;
         
-        // Dynamic FOV based on speed
-        camera.fov = 75 + speedFactor * 15;
+        // FOV: Reduced range to stop car from looking too far away (70 to 85)
+        camera.fov = 70 + speedFactor * 15;
         
-        const offset = new THREE.Vector3(0, 4 + speedFactor * 2, -10 - speedFactor * 5); 
+        // Camera offset: also reduced the "pull back" effect
+        const offset = new THREE.Vector3(0, 4 + speedFactor * 1.5, -9 - speedFactor * 3); 
         offset.applyQuaternion(playerCar.mesh.quaternion);
         
-        camera.position.lerp(playerCar.mesh.position.clone().add(offset), 0.1);
+        // Frame-rate independent lerp for camera smoothing
+        const alpha = 1 - Math.pow(0.01, dt); 
+        camera.position.lerp(playerCar.mesh.position.clone().add(offset), alpha);
+        
         camera.lookAt(playerCar.mesh.position);
         camera.updateProjectionMatrix();
 
         // Subtle camera shake at high speed
         if (speedFactor > 0.8) {
-            camera.position.x += (Math.random() - 0.5) * speedFactor * 0.1;
-            camera.position.y += (Math.random() - 0.5) * speedFactor * 0.1;
+            camera.position.x += (Math.random() - 0.5) * speedFactor * 0.05;
+            camera.position.y += (Math.random() - 0.5) * speedFactor * 0.05;
         }
     }
 
