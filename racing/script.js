@@ -732,8 +732,42 @@ function updateProgress(car) {
         }
     }
 
+    const previousT = car.lastT ?? closestT;
+
+    // Check checkpoint collection for player before miss detection.
+    // If the car is inside the ring radius this frame, count it as passed.
+    if (car.isPlayer) {
+        checkpoints.forEach(cp => {
+            if (!cp.passed) {
+                const dist = car.mesh.position.distanceTo(cp.pos);
+                if (dist < 15) { // Collection radius
+                    cp.passed = true;
+                    cp.mesh.material.color.set(0xffffff); // Turn white when passed
+                    cp.mesh.material.emissive.set(0xffffff);
+                    cp.glow.visible = false;
+                }
+            }
+        });
+
+        // Fail immediately once the player's track progress passes a checkpoint
+        // without having gone through it, instead of waiting until the lap ends.
+        const crossedForward = (from, to, checkpointT) => {
+            if (from <= to) return from < checkpointT && checkpointT <= to;
+            // Wrapped over the start/finish line.
+            return checkpointT > from || checkpointT <= to;
+        };
+
+        const missed = checkpoints.find(cp => !cp.passed && crossedForward(previousT, closestT, cp.t));
+        if (missed) {
+            missed.mesh.material.color.set(0xff0055);
+            missed.mesh.material.emissive.set(0xff0055);
+            gameOver("CHECKPOINT MISSED!");
+            return;
+        }
+    }
+
     // Handle lap cross
-    if (car.lastT > 0.8 && closestT < 0.2) {
+    if (previousT > 0.8 && closestT < 0.2) {
         if (car.isPlayer) {
             // Check if all checkpoints were passed
             const missed = checkpoints.find(cp => !cp.passed);
@@ -753,21 +787,6 @@ function updateProgress(car) {
         if (car.lap > MAX_LAPS && car.isPlayer) {
             finishRace(car);
         }
-    }
-    
-    // Check checkpoint collection for player
-    if (car.isPlayer) {
-        checkpoints.forEach(cp => {
-            if (!cp.passed) {
-                const dist = car.mesh.position.distanceTo(cp.pos);
-                if (dist < 15) { // Collection radius
-                    cp.passed = true;
-                    cp.mesh.material.color.set(0xffffff); // Turn white when passed
-                    cp.mesh.material.emissive.set(0xffffff);
-                    cp.glow.visible = false;
-                }
-            }
-        });
     }
     
     car.lastT = closestT;
