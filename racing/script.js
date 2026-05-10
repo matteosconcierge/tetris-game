@@ -60,9 +60,20 @@ export function init() {
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
     
-    renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance", alpha: false });
+    renderer = new THREE.WebGLRenderer({ 
+        antialias: false, 
+        powerPreference: "high-performance", 
+        alpha: false,
+        stencil: false,
+        depth: true
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    
+    // Aggressive Resolution Cap for Desktop (Brave/Safari/Chrome)
+    // On high-DPI desktop monitors, 2.0 is often too much for integrated GPUs or browser wrappers.
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const maxDPR = isMobile ? 2.0 : 1.25;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDPR));
     renderer.shadowMap.enabled = false; 
     document.getElementById('game-container').appendChild(renderer.domElement);
     renderer.domElement.style.display = 'block';
