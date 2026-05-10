@@ -345,8 +345,12 @@ function createGlowSprite(color) {
     canvas.height = 64;
     const ctx = canvas.getContext('2d');
     const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+
+    // Convert hex number to CSS string
+    const colorStr = typeof color === 'number' ? '#' + color.toString(16).padStart(6, '0') : color;
+
     gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    gradient.addColorStop(0.2, color);
+    gradient.addColorStop(0.2, colorStr);
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 64, 64);
