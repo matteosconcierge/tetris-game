@@ -610,30 +610,39 @@ function setupCars() {
 function setupCheckpoints() {
     // 8 Neon Rings around the track
     for (let i = 0; i < 8; i++) {
-        const t = i / 8;
+        const t = (i + 0.5) / 8; // Offset to not be exactly at start
         const pos = trackCurve.getPointAt(t);
         const tangent = trackCurve.getTangentAt(t);
         
-        checkpoints.push(t);
+        const checkpoint = {
+            t: t,
+            pos: pos,
+            passed: false,
+            mesh: null
+        };
 
         // Neon Ring
-        const ringGeo = new THREE.TorusGeometry(12, 0.3, 16, 100);
+        const ringGeo = new THREE.TorusGeometry(12, 0.3, 16, 50);
         const ringMat = new THREE.MeshStandardMaterial({ 
             color: 0x00f2ff, 
             emissive: 0x00f2ff, 
-            emissiveIntensity: 10 
+            emissiveIntensity: 5 
         });
         const ring = new THREE.Mesh(ringGeo, ringMat);
         ring.position.copy(pos);
         ring.lookAt(pos.clone().add(tangent));
         ring.position.y = 5;
         scene.add(ring);
+        checkpoint.mesh = ring;
 
         // Ring Glow
         const glow = createGlowSprite(0x00f2ff);
         glow.scale.set(35, 35, 1);
         glow.position.copy(ring.position);
         scene.add(glow);
+        checkpoint.glow = glow;
+
+        checkpoints.push(checkpoint);
     }
 }
 
@@ -723,10 +732,40 @@ function updateProgress(car) {
 
     // Handle lap cross
     if (car.lastT > 0.8 && closestT < 0.2) {
+        if (car.isPlayer) {
+            // Check if all checkpoints were passed
+            const missed = checkpoints.find(cp => !cp.passed);
+            if (missed) {
+                gameOver("CHECKPOINT MISSED!");
+                return;
+            }
+            // Reset checkpoints for next lap
+            checkpoints.forEach(cp => {
+                cp.passed = false;
+                cp.mesh.material.color.set(0x00f2ff);
+                cp.mesh.material.emissive.set(0x00f2ff);
+                cp.glow.visible = true;
+            });
+        }
         car.lap++;
         if (car.lap > MAX_LAPS && car.isPlayer) {
             finishRace(car);
         }
+    }
+    
+    // Check checkpoint collection for player
+    if (car.isPlayer) {
+        checkpoints.forEach(cp => {
+            if (!cp.passed) {
+                const dist = car.mesh.position.distanceTo(cp.pos);
+                if (dist < 15) { // Collection radius
+                    cp.passed = true;
+                    cp.mesh.material.color.set(0xffffff); // Turn white when passed
+                    cp.mesh.material.emissive.set(0xffffff);
+                    cp.glow.visible = false;
+                }
+            }
+        });
     }
     
     car.lastT = closestT;
@@ -773,6 +812,16 @@ function startRace() {
     }
 
     clock.start();
+}
+
+function gameOver(reason) {
+    if (gameState === 'FINISHED') return;
+    gameState = 'FINISHED';
+    document.getElementById('ui-overlay').classList.remove('hidden');
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('result-title').innerText = reason;
+    document.getElementById('final-results').innerHTML = `<p style="color:red; font-size:1.2rem;">You failed to pass through all checkpoints!</p>`;
 }
 
 function finishRace(winner) {
