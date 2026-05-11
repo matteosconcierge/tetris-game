@@ -20,8 +20,7 @@ const CAR_COLORS = [0x00f2ff, 0xff0055, 0x00ff44, 0xffaa00];
 const MAX_LAPS = 3;
 const NUM_AI = 3;
 const TRACK_SURFACE_Y = 0.34; // top of the flattened tube track; keeps wheels visually on asphalt
-const CHECKPOINT_RADIUS = 20;
-const CHECKPOINT_MISS_GRACE = 0.035; // wait until the car is clearly past the ring before failing
+const CHECKPOINT_HALF_WIDTH = 12;
 
 // --- STATE MANAGEMENT ---
 let scene, camera, renderer, clock;
@@ -619,11 +618,15 @@ function setupCheckpoints() {
     for (let i = 0; i < 8; i++) {
         const t = (i + 0.5) / 8; // Offset to not be exactly at start
         const pos = trackCurve.getPointAt(t);
-        const tangent = trackCurve.getTangentAt(t);
+        const tangent = trackCurve.getTangentAt(t).normalize();
+        const planeNormal = new THREE.Vector3(tangent.x, 0, tangent.z).normalize();
+        const planeRight = new THREE.Vector3().crossVectors(planeNormal, new THREE.Vector3(0, 1, 0)).normalize();
         
         const checkpoint = {
             t: t,
             pos: pos,
+            normal: planeNormal,
+            right: planeRight,
             passed: false,
             mesh: null
         };
@@ -725,6 +728,8 @@ function updateAI(dt) {
 }
 
 function updateProgress(car) {
+    const previousPos = car.lastPos ? car.lastPos.clone() : car.mesh.position.clone();
+
     // Project car position onto spline to find progress
     // Simplified: find closest point on spline
     let closestT = 0;
@@ -742,15 +747,48 @@ function updateProgress(car) {
 
     const previousT = car.lastT ?? closestT;
 
-    // Check checkpoint collection for player before miss detection.
-    // If the car is inside the ring radius this frame, count it as passed.
+    // Checkpoint detection uses the actual ring plane, not just spline progress.
+    // The car must cross the plane perpendicular to the track at the ring's depth.
     if (car.isPlayer) {
         checkpoints.forEach(cp => {
             if (!cp.passed) {
-                const dx = car.mesh.position.x - cp.pos.x;
-                const dz = car.mesh.position.z - cp.pos.z;
-                const dist = Math.hypot(dx, dz);
-                if (dist < CHECKPOINT_RADIUS) {
+                const prevRel = previousPos.clone().sub(cp.pos);
+                const currRel = car.mesh.position.clone().sub(cp.pos);
+                const prevSide = prevRel.dot(cp.normal);
+                const currSide = currRel.dot(cp.normal);
+
+                // Crossing from before the ring plane to after it.
+                if (prevSide <= 0 && currSide >= 0) {
+                    const denom = currSide - prevSide;
+                    const alpha = denom === 0 ? 1 : Math.max(0, Math.min(1, -prevSide / denom));
+                    const crossingPos = previousPos.clone().lerp(car.mesh.position, alpha);
+                    const lateralOffset = Math.abs(crossingPos.clone().sub(cp.pos).dot(cp.right));
+
+                    if (lateralOffset <= CHECKPOINT_HALF_WIDTH) {
+                        cp.passed = true;
+                        cp.mesh.material.color.set(0xffffff); // Turn white when passed
+                        cp.mesh.material.emissive.set(0xffffff);
+                        cp.glow.visible = false;
+                    } else {
+                        cp.mesh.material.color.set(0xff0055);
+                        cp.mesh.material.emissive.set(0xff0055);
+                        gameOver("CHECKPOINT MISSED!");
+                        return;
+                    }
+                }
+            }
+        });
+
+        if (gameState === 'FINISHED') return;
+
+        // Also count a checkpoint if the car starts already within the ring width.
+        // This prevents rare edge cases where a low-FPS frame lands exactly on the plane.
+        checkpoints.forEach(cp => {
+            if (!cp.passed) {
+                const rel = car.mesh.position.clone().sub(cp.pos);
+                const depthOffset = Math.abs(rel.dot(cp.normal));
+                const lateralOffset = Math.abs(rel.dot(cp.right));
+                if (depthOffset < 1.5 && lateralOffset <= CHECKPOINT_HALF_WIDTH) {
                     cp.passed = true;
                     cp.mesh.material.color.set(0xffffff); // Turn white when passed
                     cp.mesh.material.emissive.set(0xffffff);
@@ -759,25 +797,6 @@ function updateProgress(car) {
             }
         });
 
-        // Fail immediately once the player's track progress passes a checkpoint
-        // without having gone through it, instead of waiting until the lap ends.
-        const crossedForward = (from, to, checkpointT) => {
-            if (from <= to) return from < checkpointT && checkpointT <= to;
-            // Wrapped over the start/finish line.
-            return checkpointT > from || checkpointT <= to;
-        };
-
-        const missed = checkpoints.find(cp => {
-            if (cp.passed) return false;
-            const deadlineT = (cp.t + CHECKPOINT_MISS_GRACE) % 1;
-            return crossedForward(previousT, closestT, deadlineT);
-        });
-        if (missed) {
-            missed.mesh.material.color.set(0xff0055);
-            missed.mesh.material.emissive.set(0xff0055);
-            gameOver("CHECKPOINT MISSED!");
-            return;
-        }
     }
 
     // Handle lap cross
@@ -804,6 +823,7 @@ function updateProgress(car) {
     }
     
     car.lastT = closestT;
+    car.lastPos = car.mesh.position.clone();
     car.progress = car.lap + closestT;
 }
 
