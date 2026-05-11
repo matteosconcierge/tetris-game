@@ -32,6 +32,9 @@ let keys = {};
 let checkpoints = [];
 let lastFrameTime = null;
 let gameTime = 0;
+let leaderboardTimer = 0;
+let speedLineTimer = 0;
+const TRACK_SAMPLES = [];
 
 // --- UTILS ---
 
@@ -71,16 +74,18 @@ export function init() {
         stencil: false,
         depth: true
     });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(window.innerWidth, window.innerHeight, false);
     
     // Aggressive Resolution Cap for Desktop (Brave/Safari/Chrome)
     // On high-DPI desktop monitors, 2.0 is often too much for integrated GPUs or browser wrappers.
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const maxDPR = isMobile ? 2.0 : 1.25;
+    const maxDPR = isMobile ? 1.75 : 1.0;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDPR));
     renderer.shadowMap.enabled = false; 
     document.getElementById('game-container').appendChild(renderer.domElement);
     renderer.domElement.style.display = 'block';
+
+    precomputeTrackSamples();
 
     setupLights();
     setupEnvironment();
@@ -155,6 +160,14 @@ function updateSpeedLines() {
     speedLines.geometry.attributes.position.needsUpdate = true;
 }
 
+function precomputeTrackSamples() {
+    TRACK_SAMPLES.length = 0;
+    for (let i = 0; i <= 100; i++) {
+        const t = i / 100;
+        TRACK_SAMPLES.push({ t, point: trackCurve.getPoint(t) });
+    }
+}
+
 function setupMobileControls() {
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (isMobile) {
@@ -221,7 +234,7 @@ function setupEnvironment() {
 
     // Skyscrapers / Skyline in the distance
     const cityGroup = new THREE.Group();
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 55; i++) {
         const h = 50 + Math.random() * 200;
         const w = 10 + Math.random() * 20;
         const bGeo = new THREE.BoxGeometry(w, h, w);
@@ -249,7 +262,7 @@ function setupEnvironment() {
     scene.add(cityGroup);
 
     // Street Lamps along the track
-    for (let t = 0; t < 1; t += 0.05) {
+    for (let t = 0; t < 1; t += 0.1) {
         const pos = trackCurve.getPointAt(t);
         const tangent = trackCurve.getTangentAt(t);
         const right = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
@@ -262,7 +275,7 @@ function setupEnvironment() {
     }
 
     // Sky
-    const skyGeo = new THREE.SphereGeometry(1200, 32, 32);
+    const skyGeo = new THREE.SphereGeometry(1200, 16, 16);
     const skyMat = new THREE.MeshBasicMaterial({
         color: 0x020205,
         side: THREE.BackSide
@@ -273,7 +286,7 @@ function setupEnvironment() {
     // Stars
     const starGeo = new THREE.BufferGeometry();
     const starCoords = [];
-    for (let i = 0; i < 5000; i++) {
+    for (let i = 0; i < 1200; i++) {
         starCoords.push(THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(1000) + 500, THREE.MathUtils.randFloatSpread(2000));
     }
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starCoords, 3));
@@ -735,13 +748,12 @@ function updateProgress(car) {
     let closestT = 0;
     let minDist = Infinity;
     
-    // Check points on curve
-    for (let t = 0; t <= 1; t += 0.01) {
-        const p = trackCurve.getPoint(t);
-        const d = p.distanceTo(car.mesh.position);
+    // Check precomputed points on curve
+    for (const sample of TRACK_SAMPLES) {
+        const d = sample.point.distanceTo(car.mesh.position);
         if (d < minDist) {
             minDist = d;
-            closestT = t;
+            closestT = sample.t;
         }
     }
 
@@ -924,12 +936,25 @@ function animate(timestamp = 0) {
     // Avoid giant jumps after tab switches, but keep enough catch-up for low FPS.
     dt = Math.min(Math.max(dt, 1 / 240), 1 / 15);
     gameTime += dt;
+
+    if (gameState !== 'RACING') {
+        renderer.render(scene, camera);
+        return;
+    }
     
     // Pass dt to updates
     updatePlayer(dt);
     updateAI(dt);
-    updateLeaderboard();
-    updateSpeedLines();
+    leaderboardTimer += dt;
+    if (leaderboardTimer > 0.25) {
+        updateLeaderboard();
+        leaderboardTimer = 0;
+    }
+    speedLineTimer += dt;
+    if (speedLineTimer > 1 / 30) {
+        updateSpeedLines();
+        speedLineTimer = 0;
+    }
 
     // Camera follow
     if (playerCar) {
