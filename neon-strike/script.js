@@ -58,10 +58,14 @@ function init() {
 
     // Controls
     const canvas = renderer.domElement;
+    
+    // Start button
+    document.getElementById('start-btn').addEventListener('click', () => {
+        canvas.requestPointerLock();
+    });
+    
     canvas.addEventListener('click', () => {
-        if (gameState === 'MENU' || gameState === 'GAMEOVER') {
-            canvas.requestPointerLock();
-        } else if (gameState === 'PLAYING') {
+        if (gameState === 'PLAYING') {
             shoot();
         }
     });
