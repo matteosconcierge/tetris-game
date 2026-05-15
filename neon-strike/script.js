@@ -81,7 +81,7 @@ function init() {
 
     document.addEventListener('mousemove', (e) => {
         if (!isLocked || gameState !== 'PLAYING') return;
-        player.yaw += e.movementX * 0.002;
+        player.yaw -= e.movementX * 0.002;
         player.pitch -= e.movementY * 0.002;
         player.pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, player.pitch));
     });
@@ -168,16 +168,14 @@ function update(dt) {
     const rightInput = Number(moveRight) - Number(moveLeft);
     
     if (forwardInput !== 0 || rightInput !== 0) {
-        const sin = Math.sin(player.yaw);
-        const cos = Math.cos(player.yaw);
+        // Use camera's actual forward/right vectors for bulletproof POV movement
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+        forward.y = 0; forward.normalize();
+        right.y = 0; right.normalize();
         
-        // Forward direction: (sin(yaw), 0, -cos(yaw))
-        // Right direction: (cos(yaw), 0, sin(yaw))
-        const dx = (forwardInput * sin + rightInput * cos) * PLAYER_SPEED * dt;
-        const dz = (-forwardInput * cos + rightInput * sin) * PLAYER_SPEED * dt;
-        
-        camera.position.x += dx;
-        camera.position.z += dz;
+        camera.position.addScaledVector(forward, forwardInput * PLAYER_SPEED * dt);
+        camera.position.addScaledVector(right, rightInput * PLAYER_SPEED * dt);
         
         // Clamp to arena
         camera.position.x = Math.max(-ARENA_SIZE/2 + 2, Math.min(ARENA_SIZE/2 - 2, camera.position.x));
