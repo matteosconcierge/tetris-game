@@ -81,7 +81,7 @@ function init() {
 
     document.addEventListener('mousemove', (e) => {
         if (!isLocked || gameState !== 'PLAYING') return;
-        player.yaw -= e.movementX * 0.002;
+        player.yaw += e.movementX * 0.002;
         player.pitch -= e.movementY * 0.002;
         player.pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, player.pitch));
     });
