@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Neon Strike - 3D FPS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container"></div>
+    
+    <div id="hud">
+        <div id="health-bar-container">
+            <div id="health-bar"></div>
+        </div>
+        <div id="score">Score: 0</div>
+        <div id="ammo">Ammo: 20 / ∞</div>
+    </div>
+
+    <div id="crosshair">+</div>
+
+    <div id="start-screen">
+        <h1>NEON STRIKE</h1>
+        <p>WASD to Move • Mouse to Aim • Click to Shoot</p>
+        <button id="start-btn">ENTER ARENA</button>
+    </div>
+
+    <div id="game-over-screen">
+        <h1>MISSION FAILED</h1>
+        <p id="final-score">Score: 0</p>
+        <button id="restart-btn">RETRY</button>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
