@@ -4,7 +4,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 const ARENA_SIZE = 80;
 const WALL_HEIGHT = 8;
 const PLAYER_SPEED = 12;
-const ENEMY_SPEED = 5;
+const ENEMY_SPEED = 3;
 const SPAWN_RATE = 1500;
 const MAX_ENEMIES = 15;
 
@@ -194,10 +194,47 @@ function spawnEnemy() {
     if (enemies.length >= MAX_ENEMIES) return;
     const angle = Math.random() * Math.PI * 2;
     const r = ARENA_SIZE / 2 - 3;
-    const enemy = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: 0xff0066, emissive: 0xff0066, emissiveIntensity: 0.5 }));
-    enemy.position.set(Math.cos(angle) * r, 0.75, Math.sin(angle) * r);
-    scene.add(enemy);
-    enemies.push({ mesh: enemy });
+    
+    // Create zombie group
+    const zombie = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0x5a7a5a, roughness: 0.8 });
+    const clothMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.9 });
+    
+    // Body
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.5), clothMat);
+    body.position.y = 1.2;
+    zombie.add(body);
+    
+    // Head
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skinMat);
+    head.position.y = 1.9;
+    zombie.add(head);
+    
+    // Left arm (hanging)
+    const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.8, 0.25), skinMat);
+    lArm.position.set(-0.55, 1.0, 0);
+    lArm.rotation.x = 0.3;
+    zombie.add(lArm);
+    
+    // Right arm (reaching forward)
+    const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.8, 0.25), skinMat);
+    rArm.position.set(0.55, 1.0, 0.2);
+    rArm.rotation.x = -0.5;
+    zombie.add(rArm);
+    
+    // Left leg
+    const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), clothMat);
+    lLeg.position.set(-0.2, 0.4, 0);
+    zombie.add(lLeg);
+    
+    // Right leg
+    const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), clothMat);
+    rLeg.position.set(0.2, 0.4, 0);
+    zombie.add(rLeg);
+    
+    zombie.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+    scene.add(zombie);
+    enemies.push({ mesh: zombie });
 }
 
 function update(dt) {
@@ -236,6 +273,17 @@ function update(dt) {
         const d = new THREE.Vector3().subVectors(camera.position, e.mesh.position).normalize();
         e.mesh.position.add(d.multiplyScalar(ENEMY_SPEED * dt));
         e.mesh.lookAt(camera.position);
+        
+        // Zombie stagger animation
+        const t = Date.now() * 0.003;
+        if (e.mesh.children.length >= 6) {
+            // Legs sway
+            e.mesh.children[4].rotation.x = Math.sin(t) * 0.3;
+            e.mesh.children[5].rotation.x = Math.sin(t + Math.PI) * 0.3;
+            // Arms sway
+            e.mesh.children[2].rotation.z = Math.sin(t * 0.8) * 0.2;
+            e.mesh.children[3].rotation.z = Math.sin(t * 0.8 + Math.PI) * 0.2;
+        }
         
         if (e.mesh.position.distanceTo(camera.position) < 1.5) {
             player.health -= 15;
