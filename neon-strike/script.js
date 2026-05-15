@@ -87,14 +87,13 @@ function init() {
     controls = new PointerLockControls(camera, document.body);
     
     document.getElementById('start-btn').addEventListener('click', () => {
-        controls.lock();
-        startGame();
+         document.getElementById('start-screen').classList.add('hidden');
+         controls.lock();
+         startGame();
     });
 
     controls.addEventListener('lock', () => {
-        document.getElementById('start-screen').classList.add('hidden');
-        document.getElementById('game-over-screen').classList.add('hidden');
-        gameState = 'PLAYING';
+         // Pointer successfully locked
     });
 
     controls.addEventListener('unlock', () => {
