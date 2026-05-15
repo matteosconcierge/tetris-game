@@ -272,7 +272,10 @@ function update(dt) {
         const e = enemies[i];
         const d = new THREE.Vector3().subVectors(camera.position, e.mesh.position).normalize();
         e.mesh.position.add(d.multiplyScalar(ENEMY_SPEED * dt));
-        e.mesh.lookAt(camera.position);
+        // Rotate zombie horizontally towards player (ignore height to keep feet on ground)
+        const target = camera.position.clone();
+        target.y = e.mesh.position.y;
+        e.mesh.lookAt(target);
         
         // Zombie stagger animation
         const t = Date.now() * 0.003;
