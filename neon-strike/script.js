@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', init);
 
 function init() {
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050505);
-    scene.fog = new THREE.Fog(0x050505, 15, 60);
+    scene.background = new THREE.Color(0x1a1510);
+    scene.fog = new THREE.Fog(0x1a1510, 20, 70);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
     camera.position.set(0, 1.7, 0);
@@ -35,26 +35,71 @@ function init() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     document.getElementById('game-container').appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(10, 20, 10);
-    scene.add(dirLight);
+    // Warm lighting
+    scene.add(new THREE.AmbientLight(0xffeedd, 0.6));
+    const mainLight = new THREE.PointLight(0xffaa44, 2, 60);
+    mainLight.position.set(0, WALL_HEIGHT - 1, 0);
+    scene.add(mainLight);
+    const spot1 = new THREE.SpotLight(0xffcc88, 1.5, 50, Math.PI/4);
+    spot1.position.set(-20, WALL_HEIGHT, -20); scene.add(spot1);
+    const spot2 = new THREE.SpotLight(0xffcc88, 1.5, 50, Math.PI/4);
+    spot2.position.set(20, WALL_HEIGHT, 20); scene.add(spot2);
 
     // Floor
-    const grid = new THREE.GridHelper(ARENA_SIZE, 20, 0x00ffcc, 0x004444);
-    scene.add(grid);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_SIZE, ARENA_SIZE), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    // Terrazzo marble floor
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_SIZE, ARENA_SIZE), new THREE.MeshStandardMaterial({ color: 0xc8b89a, roughness: 0.3, metalness: 0.1 }));
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.05;
+    floor.position.y = 0;
     scene.add(floor);
 
     // Walls
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0xff0066, emissive: 0xff0066, emissiveIntensity: 0.6 });
-    const wGeo = new THREE.BoxGeometry(ARENA_SIZE, WALL_HEIGHT, 1);
+    // Cream/beige walls
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.7 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xc5a55a, metalness: 0.8, roughness: 0.3 });
+    const wGeo = new THREE.BoxGeometry(ARENA_SIZE, WALL_HEIGHT, 1.5);
     const w1 = new THREE.Mesh(wGeo, wallMat); w1.position.set(0, WALL_HEIGHT/2, -ARENA_SIZE/2); scene.add(w1);
     const w2 = new THREE.Mesh(wGeo, wallMat); w2.position.set(0, WALL_HEIGHT/2, ARENA_SIZE/2); scene.add(w2);
     const w3 = new THREE.Mesh(wGeo, wallMat); w3.rotation.y = Math.PI/2; w3.position.set(-ARENA_SIZE/2, WALL_HEIGHT/2, 0); scene.add(w3);
     const w4 = new THREE.Mesh(wGeo, wallMat); w4.rotation.y = Math.PI/2; w4.position.set(ARENA_SIZE/2, WALL_HEIGHT/2, 0); scene.add(w4);
+    
+    // Gold trim
+    const trimGeo = new THREE.BoxGeometry(ARENA_SIZE, 0.3, 0.6);
+    const t1 = new THREE.Mesh(trimGeo, goldMat); t1.position.set(0, WALL_HEIGHT, -ARENA_SIZE/2); scene.add(t1);
+    const t2 = new THREE.Mesh(trimGeo, goldMat); t2.position.set(0, WALL_HEIGHT, ARENA_SIZE/2); scene.add(t2);
+    const t3 = new THREE.Mesh(trimGeo, goldMat); t3.rotation.y = Math.PI/2; t3.position.set(-ARENA_SIZE/2, WALL_HEIGHT, 0); scene.add(t3);
+    const t4 = new THREE.Mesh(trimGeo, goldMat); t4.rotation.y = Math.PI/2; t4.position.set(ARENA_SIZE/2, WALL_HEIGHT, 0); scene.add(t4);
+    
+    // Columns
+    const colGeo = new THREE.CylinderGeometry(0.5, 0.5, WALL_HEIGHT, 12);
+    const colMat = new THREE.MeshStandardMaterial({ color: 0xf0e6d2, roughness: 0.4 });
+    for (let i = -2; i <= 2; i++) {
+        const c1 = new THREE.Mesh(colGeo, colMat); c1.position.set(i*15, WALL_HEIGHT/2, -ARENA_SIZE/2+1); scene.add(c1);
+        const c2 = new THREE.Mesh(colGeo, colMat); c2.position.set(i*15, WALL_HEIGHT/2, ARENA_SIZE/2-1); scene.add(c2);
+    }
+    
+    // Ceiling
+    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_SIZE, ARENA_SIZE), new THREE.MeshStandardMaterial({ color: 0x2a2520 }));
+    ceil.rotation.x = Math.PI / 2;
+    ceil.position.y = WALL_HEIGHT;
+    scene.add(ceil);
+    
+    // Benches
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.8 });
+    for (let i = -1; i <= 1; i++) {
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(4, 0.3, 1.5), benchMat);
+        seat.position.set(i*20, 0.8, -ARENA_SIZE/2+4); scene.add(seat);
+        const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 1.5), benchMat);
+        leg1.position.set(i*20-1.5, 0.4, -ARENA_SIZE/2+4); scene.add(leg1);
+        const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 1.5), benchMat);
+        leg2.position.set(i*20+1.5, 0.4, -ARENA_SIZE/2+4); scene.add(leg2);
+    }
+    
+    // Information booth
+    const boothMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.7 });
+    const booth = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 3), boothMat);
+    booth.position.set(0, 1.5, 0); scene.add(booth);
+    const boothTop = new THREE.Mesh(new THREE.BoxGeometry(7, 0.3, 4), goldMat);
+    boothTop.position.set(0, 3.15, 0); scene.add(boothTop);
 
     // Controls
     const canvas = renderer.domElement;
