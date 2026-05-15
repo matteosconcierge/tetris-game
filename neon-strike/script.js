@@ -142,6 +142,7 @@ function init() {
 
     // Restart
     document.getElementById('restart-btn').addEventListener('click', () => {
+        document.getElementById('game-over-screen').classList.add('hidden');
         controls.lock();
         startGame();
     });
