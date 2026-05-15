@@ -163,7 +163,7 @@ function update(dt) {
     camera.rotation.y = player.yaw;
     camera.rotation.x = player.pitch;
 
-    // Movement
+    // Movement relative to player POV
     const forwardInput = Number(moveForward) - Number(moveBackward);
     const rightInput = Number(moveRight) - Number(moveLeft);
     
@@ -171,9 +171,10 @@ function update(dt) {
         const sin = Math.sin(player.yaw);
         const cos = Math.cos(player.yaw);
         
-        // Forward/Backward movement relative to yaw
-        const dx = (-forwardInput * cos + rightInput * sin) * PLAYER_SPEED * dt;
-        const dz = (-forwardInput * sin - rightInput * cos) * PLAYER_SPEED * dt;
+        // Forward direction: (sin(yaw), 0, -cos(yaw))
+        // Right direction: (cos(yaw), 0, sin(yaw))
+        const dx = (forwardInput * sin + rightInput * cos) * PLAYER_SPEED * dt;
+        const dz = (-forwardInput * cos + rightInput * sin) * PLAYER_SPEED * dt;
         
         camera.position.x += dx;
         camera.position.z += dz;
