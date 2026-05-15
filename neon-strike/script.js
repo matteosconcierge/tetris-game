@@ -210,16 +210,16 @@ function spawnEnemy() {
     head.position.y = 1.9;
     zombie.add(head);
     
-    // Left arm (hanging)
+    // Left arm (reaching forward)
     const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.8, 0.25), skinMat);
-    lArm.position.set(-0.55, 1.0, 0);
-    lArm.rotation.x = 0.3;
+    lArm.position.set(-0.55, 1.2, 0.4);
+    lArm.rotation.x = -0.8;
     zombie.add(lArm);
     
     // Right arm (reaching forward)
     const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.8, 0.25), skinMat);
-    rArm.position.set(0.55, 1.0, 0.2);
-    rArm.rotation.x = -0.5;
+    rArm.position.set(0.55, 1.2, 0.4);
+    rArm.rotation.x = -0.8;
     zombie.add(rArm);
     
     // Left leg
@@ -232,7 +232,7 @@ function spawnEnemy() {
     rLeg.position.set(0.2, 0.4, 0);
     zombie.add(rLeg);
     
-    zombie.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+    zombie.position.set(Math.cos(angle) * r, -0.5, Math.sin(angle) * r);
     scene.add(zombie);
     enemies.push({ mesh: zombie });
 }
