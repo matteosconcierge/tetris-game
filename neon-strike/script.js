@@ -164,26 +164,21 @@ function update(dt) {
     camera.rotation.x = player.pitch;
 
     // Movement
-    const dir = new THREE.Vector3();
-    if (moveForward) dir.z -= 1;
-    if (moveBackward) dir.z += 1;
-    if (moveLeft) dir.x -= 1;
-    if (moveRight) dir.x += 1;
-    dir.normalize();
+    const forwardInput = Number(moveForward) - Number(moveBackward);
+    const rightInput = Number(moveRight) - Number(moveLeft);
     
-    if (dir.length() > 0) {
-        const angle = Math.atan2(dir.x, dir.z);
-        const moveAngle = angle - Math.PI / 2; // Align with camera yaw logic
-        // Simpler: move relative to yaw
+    if (forwardInput !== 0 || rightInput !== 0) {
         const sin = Math.sin(player.yaw);
         const cos = Math.cos(player.yaw);
-        const dx = (dir.x * cos - dir.z * sin) * PLAYER_SPEED * dt;
-        const dz = (dir.x * sin + dir.z * cos) * PLAYER_SPEED * dt;
+        
+        // Forward/Backward movement relative to yaw
+        const dx = (-forwardInput * cos + rightInput * sin) * PLAYER_SPEED * dt;
+        const dz = (-forwardInput * sin - rightInput * cos) * PLAYER_SPEED * dt;
         
         camera.position.x += dx;
         camera.position.z += dz;
         
-        // Clamp
+        // Clamp to arena
         camera.position.x = Math.max(-ARENA_SIZE/2 + 2, Math.min(ARENA_SIZE/2 - 2, camera.position.x));
         camera.position.z = Math.max(-ARENA_SIZE/2 + 2, Math.min(ARENA_SIZE/2 - 2, camera.position.z));
     }
