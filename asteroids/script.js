@@ -5,8 +5,8 @@
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const W = () => canvas.width;
-const H = () => canvas.height;
+const W = () => canvas.width / dpr;
+const H = () => canvas.height / dpr;
 
 let dpr = 1;
 
