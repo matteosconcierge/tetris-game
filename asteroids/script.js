@@ -124,14 +124,14 @@ class Player {
         this.pos = new Vec2(W() / 2, H() / 2);
         this.vel = new Vec2(0, 0);
         this.angle = -Math.PI / 2;
-        this.radius = 12;
+        this.radius = 16;
         this.thrusting = false;
         this.shooting = false;
         this.boostActive = false;
-        this.invincible = 0;
+        this.invincible = 2.5;
         this.shootCooldown = 0;
         this.alive = true;
-        this.respawnTimer = 0;
+        this.spawnFlash = 1.0;
         this.engineGlow = 0;
     }
     update(dt) {
@@ -171,6 +171,9 @@ class Player {
 
         this.pos = wrap(this.pos.add(this.vel.scale(dt)));
 
+        // Spawn flash decay
+        if (this.spawnFlash > 0) this.spawnFlash = Math.max(0, this.spawnFlash - dt * 2.5);
+
         // Shooting
         this.shootCooldown -= dt;
         const wantsShoot = keys[' '] || touch.fire;
@@ -188,42 +191,129 @@ class Player {
         ctx.translate(this.pos.x, this.pos.y);
         ctx.rotate(this.angle);
 
-        // Engine glow
-        if (this.engineGlow > 0.05) {
-            ctx.shadowColor = '#00ffc8';
-            ctx.shadowBlur = 20 * this.engineGlow;
-            ctx.fillStyle = `rgba(0,255,200,${0.3 * this.engineGlow})`;
+        const glow = this.engineGlow;
+        const boost = this.boostActive;
+        const flash = this.spawnFlash || 0;
+
+        // Spawn flash — expanding ring
+        if (flash > 0.01) {
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = `rgba(0,255,200,${flash * 0.5})`;
+            ctx.lineWidth = 2;
+            const ringR = 22 + (1 - flash) * 30;
             ctx.beginPath();
-            ctx.moveTo(-18, 0);
-            ctx.lineTo(-18 - 20 * this.engineGlow, -6);
-            ctx.lineTo(-18 - 20 * this.engineGlow, 6);
+            ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = `rgba(0,255,200,${flash * 0.2})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, ringR + 6, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Engine exhaust — dual nozzles
+        if (glow > 0.05) {
+            const len = 18 * glow;
+            const wide = boost ? 10 : 6;
+            ctx.shadowColor = boost ? '#ff5577' : '#00ffc8';
+            ctx.shadowBlur = 25 * glow;
+            ctx.fillStyle = boost
+                ? `rgba(255,85,119,${0.3 * glow})`
+                : `rgba(0,255,200,${0.3 * glow})`;
+            // Left nozzle
+            ctx.beginPath();
+            ctx.moveTo(-8, -5);
+            ctx.lineTo(-8 - len, -5 - wide * 0.4);
+            ctx.lineTo(-8 - len, 0);
+            ctx.lineTo(-8, 0);
+            ctx.closePath();
+            ctx.fill();
+            // Right nozzle
+            ctx.beginPath();
+            ctx.moveTo(-8, 0);
+            ctx.lineTo(-8 - len, 0);
+            ctx.lineTo(-8 - len, 5 + wide * 0.4);
+            ctx.lineTo(-8, 5);
             ctx.closePath();
             ctx.fill();
             ctx.shadowBlur = 0;
         }
 
-        // Ship body
-        ctx.shadowColor = '#00ffc8';
-        ctx.shadowBlur = 15;
-        ctx.strokeStyle = '#00ffc8';
+        // Ship hull
+        ctx.shadowColor = boost ? '#ff5577' : '#00ffc8';
+        ctx.shadowBlur = boost ? 20 : 15;
+        ctx.strokeStyle = boost ? '#ff5577' : '#00ffc8';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(18, 0);
-        ctx.lineTo(-12, -12);
-        ctx.lineTo(-6, 0);
-        ctx.lineTo(-12, 12);
+        // Nose
+        ctx.moveTo(22, 0);
+        // Right cockpit
+        ctx.lineTo(16, 3);
+        // Right body narrow
+        ctx.lineTo(8, 6);
+        // Right wing tip
+        ctx.lineTo(0, 15);
+        // Right wing inner
+        ctx.lineTo(-4, 9);
+        // Right engine fairing
+        ctx.lineTo(-8, 7);
+        // Rear center indent
+        ctx.lineTo(-11, 0);
+        // Left engine fairing
+        ctx.lineTo(-8, -7);
+        // Left wing inner
+        ctx.lineTo(-4, -9);
+        // Left wing tip
+        ctx.lineTo(0, -15);
+        // Left body narrow
+        ctx.lineTo(8, -6);
+        // Left cockpit
+        ctx.lineTo(16, -3);
         ctx.closePath();
         ctx.stroke();
 
-        // Boost glow
-        if (this.boostActive) {
+        // Cockpit window
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#66ffdd';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(18, 0);
+        ctx.lineTo(14, -2.5);
+        ctx.lineTo(9, -2);
+        ctx.lineTo(9, 2);
+        ctx.lineTo(14, 2.5);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(0,255,200,0.1)';
+        ctx.fill();
+
+        // Wingtip accent lines
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = boost ? 'rgba(255,85,119,0.4)' : 'rgba(0,255,200,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, 15);
+        ctx.lineTo(-2, 12);
+        ctx.moveTo(0, -15);
+        ctx.lineTo(-2, -12);
+        ctx.stroke();
+
+        // Boost overdrive glow
+        if (boost) {
             ctx.shadowColor = '#ff3355';
-            ctx.shadowBlur = 25;
-            ctx.strokeStyle = '#ff3355';
-            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 30;
+            ctx.strokeStyle = 'rgba(255,51,85,0.15)';
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(20, 0);
-            ctx.lineTo(-14, 0);
+            ctx.lineTo(-12, 0);
+            ctx.stroke();
+            // Core glow line
+            ctx.shadowBlur = 20;
+            ctx.strokeStyle = 'rgba(255,85,119,0.3)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, 17, -0.3, 0.3);
             ctx.stroke();
         }
 
