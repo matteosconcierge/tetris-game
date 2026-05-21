@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Cosmoclasm - Neon Asteroids</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-wrapper">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-overlay">
+            <div id="hud">
+                <div class="hud-item">
+                    <span class="hud-label">SCORE</span>
+                    <span id="scoreDisplay">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">WAVE</span>
+                    <span id="waveDisplay">1</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">LIVES</span>
+                    <span id="livesDisplay">★★★</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">HIGH</span>
+                    <span id="highScoreDisplay">0</span>
+                </div>
+            </div>
+            <div id="menu-screen">
+                <h1 class="neon-title">COSMOCLASM</h1>
+                <p class="subtitle">NEON ASTEROIDS</p>
+                <div class="ship-preview">▲</div>
+                <button id="startBtn" class="neon-btn">[ PLAY ]</button>
+                <div class="controls-info">
+                    <p>WASD / Arrows — Move</p>
+                    <p>Space / Tap — Shoot</p>
+                    <p>Shift — Boost / Hyperspace</p>
+                </div>
+            </div>
+            <div id="gameover-screen" class="hidden">
+                <h1 class="neon-title dead">GAME OVER</h1>
+                <p class="subtitle">FINAL SCORE: <span id="finalScore">0</span></p>
+                <button id="restartBtn" class="neon-btn">[ TRY AGAIN ]</button>
+            </div>
+            <div id="mobile-controls" class="hidden">
+                <div id="joystick-area">
+                    <div id="joystick-knob"></div>
+                </div>
+                <div id="fire-btn">FIRE</div>
+                <div id="boost-btn">BOOST</div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
