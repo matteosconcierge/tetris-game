@@ -58,7 +58,7 @@ document.addEventListener('keyup', e => {
 });
 
 // ---- Touch state ----
-const touch = { x: 0, y: 0, active: false, fire: false, boost: false };
+const touch = { dx: 0, dy: 0, active: false, fire: false, boost: false };
 let joystickTouchId = null;
 let fireTouchId = null;
 let boostTouchId = null;
@@ -143,17 +143,16 @@ class Player {
         if (keys['a'] || keys['arrowleft']) rot = -1;
         if (keys['d'] || keys['arrowright']) rot = 1;
         if (touch.active) {
-            const dx = touch.x - this.pos.x;
-            const dy = touch.y - this.pos.y;
-            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                this.angle = Math.atan2(dy, dx);
+            if (Math.abs(touch.dx) > 0.15 || Math.abs(touch.dy) > 0.15) {
+                this.angle = Math.atan2(touch.dy, touch.dx);
             }
         } else {
             this.angle += rot * 3.5 * dt;
         }
 
         // Thrust
-        this.thrusting = keys['w'] || keys['arrowup'] || (touch.active && Math.abs(touch.x - this.pos.x) < 40 && Math.abs(touch.y - this.pos.y) < 40);
+        const joystickThrust = touch.active && (Math.abs(touch.dx) > 0.15 || Math.abs(touch.dy) > 0.15);
+        this.thrusting = keys['w'] || keys['arrowup'] || joystickThrust;
         if (this.thrusting) {
             const thrust = new Vec2(Math.cos(this.angle), Math.sin(this.angle)).scale(280);
             this.vel = this.vel.add(thrust.scale(dt));
@@ -443,7 +442,11 @@ function updateHUD() {
 
 // ---- Main loop ----
 let lastTime = 0;
+let gameFrameCount = 0;
 function gameLoop(time) {
+    // Skip first frames on game start to prevent dt spikes
+    gameFrameCount++;
+    if (gameFrameCount < 5) { lastTime = time; requestAnimationFrame(gameLoop); draw(); return; }
     const dt = Math.min((time - lastTime) / 1000, 0.05);
     lastTime = time;
 
@@ -590,6 +593,7 @@ function startGame() {
     mobileControls.classList.remove('hidden');
     initStars();
     initGame();
+    gameFrameCount = 0;
     gameRunning = true;
     // Show mobile controls on touch devices
     if ('ontouchstart' in window) {
@@ -627,6 +631,8 @@ if ('ontouchstart' in window) {
             if (t.identifier === joystickTouchId) {
                 joystickTouchId = null;
                 touch.active = false;
+                touch.dx = 0;
+                touch.dy = 0;
                 joystickKnob.style.transform = 'translate(-50%, -50%)';
             }
         }
@@ -646,10 +652,9 @@ if ('ontouchstart' in window) {
         }
         joystickKnob.style.transform = `translate(${-50 + (dx / maxDist) * 50}%, ${-50 + (dy / maxDist) * 50}%)`;
 
-        // Map joystick to player direction
-        if (gameRunning && player && player.alive) {
-            player.angle = Math.atan2(dy, dx);
-        }
+        // Store normalized deflection for player control
+        touch.dx = dx / maxDist;
+        touch.dy = dy / maxDist;
     }
 
     // Fire button
