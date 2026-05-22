@@ -203,13 +203,33 @@
                 this.mesh.position.addScaledVector(this.direction, this.speed);
                 if (this.isPlayer) {
                     for (let i = this.zombies.length - 1; i >= 0; i--) {
-                        if (this.mesh.position.distanceTo(this.zombies[i].group.position) < 1.2) {
+                        if (this.mesh.position.distanceTo(this.zombies[i].group.position) < 2.5) {
+                            impacts.push(new Impact(this.mesh.position, this.scene));
                             if (this.zombies[i].takeDamage()) this.zombies.splice(i, 1);
                             return true;
                         }
                     }
                 }
-                return (performance.now() - this.startTime > 5000);
+                let expired = (performance.now() - this.startTime > 5000);
+                if (expired) impacts.push(new Impact(this.mesh.position, this.scene));
+                return expired;
+            }
+        }
+
+        class Impact {
+            constructor(pos, scene) {
+                const geo = new THREE.SphereGeometry(0.15, 8, 8);
+                const mat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 1 });
+                this.mesh = new THREE.Mesh(geo, mat);
+                this.mesh.position.copy(pos);
+                this.life = 1.0;
+                scene.add(this.mesh);
+            }
+            update(dt) {
+                this.life -= dt * 0.8;
+                this.mesh.material.opacity = Math.max(0, this.life);
+                this.mesh.scale.setScalar(1 + (1 - this.life) * 3);
+                return this.life <= 0;
             }
         }
 
@@ -312,7 +332,7 @@
         let playerHealth = 100, killCount = 0, isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
         let velocity = new THREE.Vector3(), direction = new THREE.Vector3(), prevTime = performance.now();
-        let zombies = [], bullets = [], lastFireTime = 0, joystickInput = { x: 0, y: 0 }, joystickTouchId = null;
+        let zombies = [], bullets = [], impacts = [], lastFireTime = 0, joystickInput = { x: 0, y: 0 }, joystickTouchId = null;
 
         function spawnZombie() {
             const zombie = new Zombie(scene, zombies, bullets, controls, playerDamage, spawnZombie);
@@ -587,6 +607,9 @@
             const pPos = controls.getObject().position;
             zombies.forEach(z => z.update(time, pPos));
             for(let i=bullets.length-1; i>=0; i--) if(bullets[i].update()) { scene.remove(bullets[i].mesh); bullets.splice(i, 1); }
+
+            // Impact Effects
+            for(let i=impacts.length-1; i>=0; i--) if(impacts[i].update(delta)) { scene.remove(impacts[i].mesh); impacts.splice(i, 1); }
 
             // Movement Physics
             velocity.x -= velocity.x * 10 * delta; velocity.z -= velocity.z * 10 * delta; velocity.y -= 9.8 * 10 * delta;
