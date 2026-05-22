@@ -121,7 +121,7 @@ class Player {
         this.reset();
     }
     reset() {
-        this.pos = new Vec2(W() / 2, H() / 2);
+        this.pos = new Vec2(canvas.clientWidth / 2, canvas.clientHeight / 2);
         this.vel = new Vec2(0, 0);
         this.angle = -Math.PI / 2;
         this.radius = 16;
@@ -609,7 +609,7 @@ function update(dt) {
                 setTimeout(() => {
                     player.reset();
                     player.invincible = 2;
-                    player.pos = new Vec2(W() / 2, H() / 2);
+                    player.pos = new Vec2(canvas.clientWidth / 2, canvas.clientHeight / 2);
                     player.vel = new Vec2(0, 0);
                 }, 1000);
                 break;
