@@ -633,7 +633,7 @@ class ChessUI {
                 const logicalRow = r;
                 const logicalCol = c;
                 
-                square.className = `square ${(logicalRow + logicalCol) % 2 === 0 ? 'light' : 'dark'}`;
+                square.className = `square ${(logicalRow + logicalCol) % 2 === 0 ? 'dark' : 'light'}`;
                 square.dataset.row = logicalRow;
                 square.dataset.col = logicalCol;
                 
