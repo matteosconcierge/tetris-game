@@ -40,6 +40,7 @@ h1 {
 #board {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
     width: 90vmin;
     height: 90vmin;
     max-width: 600px;
