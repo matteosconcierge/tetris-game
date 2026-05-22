@@ -625,33 +625,38 @@ class ChessUI {
     renderBoard() {
         this.boardEl.innerHTML = '';
         
-        for (let r = 0; r < 8; r++) {
+        // Render from rank 7 (top visual) to rank 0 (bottom visual) so White is at the bottom
+        for (let r = 7; r >= 0; r--) {
             for (let c = 0; c < 8; c++) {
                 const square = document.createElement('div');
-                square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                square.dataset.row = r;
-                square.dataset.col = c;
+                // Logical coordinates for the visual square
+                const logicalRow = r;
+                const logicalCol = c;
+                
+                square.className = `square ${(logicalRow + logicalCol) % 2 === 0 ? 'light' : 'dark'}`;
+                square.dataset.row = logicalRow;
+                square.dataset.col = logicalCol;
                 
                 // Highlight last move
                 if (this.game.lastMove) {
-                    if ((r === this.game.lastMove.from.row && c === this.game.lastMove.from.col) ||
-                        (r === this.game.lastMove.to.row && c === this.game.lastMove.to.col)) {
+                    if ((logicalRow === this.game.lastMove.from.row && logicalCol === this.game.lastMove.from.col) ||
+                        (logicalRow === this.game.lastMove.to.row && logicalCol === this.game.lastMove.to.col)) {
                         square.classList.add('last-move');
                     }
                 }
                 
                 // Highlight selected square
-                if (this.selectedSquare && this.selectedSquare.row === r && this.selectedSquare.col === c) {
+                if (this.selectedSquare && this.selectedSquare.row === logicalRow && this.selectedSquare.col === logicalCol) {
                     square.classList.add('selected');
                 }
                 
                 // Highlight valid moves
-                if (this.validMoves.some(m => m.to.row === r && m.to.col === c)) {
+                if (this.validMoves.some(m => m.to.row === logicalRow && m.to.col === logicalCol)) {
                     square.classList.add('valid-move');
                 }
                 
                 // Render piece
-                const piece = this.game.board[r][c];
+                const piece = this.game.board[logicalRow][logicalCol];
                 if (piece) {
                     const pieceEl = document.createElement('span');
                     pieceEl.className = `piece ${piece.color === COLORS.WHITE ? 'white-piece' : 'black-piece'}`;
