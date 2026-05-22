@@ -614,6 +614,8 @@ class ChessUI {
         this.statusEl = document.getElementById('status');
         this.capturedWhiteEl = document.getElementById('captured-white');
         this.capturedBlackEl = document.getElementById('captured-black');
+        this.selectedSquare = null;
+        this.validMoves = [];
         
         this.renderBoard();
         this.updateStatus();
