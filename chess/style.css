@@ -1,0 +1,139 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #0a0a12;
+    color: #00ffc8;
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+}
+
+h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px #00ffc8, 0 0 20px #00ffc8;
+    letter-spacing: 4px;
+}
+
+#status {
+    margin-top: 10px;
+    font-size: 1.2rem;
+    color: #ff5577;
+    text-shadow: 0 0 5px #ff5577;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    width: 80vmin;
+    height: 80vmin;
+    max-width: 600px;
+    max-height: 600px;
+    border: 2px solid #00ffc8;
+    box-shadow: 0 0 15px rgba(0, 255, 200, 0.3);
+}
+
+.square {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 5vmin;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+@media (min-width: 750px) {
+    .square {
+        font-size: 40px;
+    }
+}
+
+.square.light {
+    background-color: #1a1a24;
+}
+
+.square.dark {
+    background-color: #0d0d14;
+}
+
+.square.selected {
+    background-color: rgba(0, 255, 200, 0.3) !important;
+    box-shadow: inset 0 0 10px #00ffc8;
+}
+
+.square.valid-move::after {
+    content: '';
+    position: absolute;
+    width: 30%;
+    height: 30%;
+    background-color: rgba(0, 255, 200, 0.5);
+    border-radius: 50%;
+}
+
+.square.last-move {
+    background-color: rgba(255, 85, 119, 0.2) !important;
+}
+
+.piece {
+    z-index: 2;
+    transition: transform 0.2s;
+}
+
+.white-piece {
+    color: #00ffc8;
+    text-shadow: 0 0 5px #00ffc8;
+}
+
+.black-piece {
+    color: #ff5577;
+    text-shadow: 0 0 5px #ff5577;
+}
+
+#controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+button, select {
+    background: transparent;
+    border: 1px solid #00ffc8;
+    color: #00ffc8;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+
+button:hover, select:hover {
+    background-color: rgba(0, 255, 200, 0.1);
+    box-shadow: 0 0 10px rgba(0, 255, 200, 0.5);
+}
+
+#captured-white, #captured-black {
+    display: flex;
+    flex-wrap: wrap;
+    min-height: 30px;
+    gap: 5px;
+    font-size: 1.5rem;
+    width: 80vmin;
+    max-width: 600px;
+}

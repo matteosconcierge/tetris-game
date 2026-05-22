@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Chess | LocalAgent Arcade</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <h1>NEON CHESS</h1>
+            <div id="status">White to move</div>
+        </header>
+        
+        <div id="board"></div>
+        
+        <div id="controls">
+            <button id="new-game">New Game</button>
+            <button id="undo">Undo</button>
+            <select id="difficulty">
+                <option value="1">Easy</option>
+                <option value="2">Medium</option>
+                <option value="3" selected>Hard</option>
+            </select>
+        </div>
+
+        <div id="captured-white"></div>
+        <div id="captured-black"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
