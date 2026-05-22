@@ -787,6 +787,21 @@ class ChessUI {
 
 let chessUI;
 
-document.addEventListener('DOMContentLoaded', () => {
-    chessUI = new ChessUI();
-});
+function init() {
+    try {
+        chessUI = new ChessUI();
+    } catch (e) {
+        console.error("Initialization failed:", e);
+        const board = document.getElementById('board');
+        if (board) {
+            board.innerHTML = '<div style="grid-column: 1/-1; display: flex; justify-content: center; align-items: center; height: 100%; color: #ff5577; text-align: center; padding: 20px;">Error loading game.<br><br>' + e.message + '</div>';
+        }
+    }
+}
+
+// Run immediately if DOM is ready, otherwise wait for load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
