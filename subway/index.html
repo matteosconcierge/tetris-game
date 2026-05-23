@@ -205,10 +205,11 @@
                     for (let i = this.zombies.length - 1; i >= 0; i--) {
                         if (this.mesh.position.distanceTo(this.zombies[i].group.position) < 2.5) {
                             // Create persistent red bullet hole on zombie
-                            const holeGeo = new THREE.SphereGeometry(0.1, 8, 8);
+                            const holeGeo = new THREE.SphereGeometry(0.12, 8, 8);
                             const holeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
                             const hole = new THREE.Mesh(holeGeo, holeMat);
                             const localPos = this.zombies[i].group.worldToLocal(this.mesh.position.clone());
+                            hole.position.copy(localPos);
                             this.zombies[i].group.add(hole);
                             
                             if (this.zombies[i].takeDamage()) this.zombies.splice(i, 1);
@@ -219,10 +220,11 @@
                 let expired = (performance.now() - this.startTime > 5000);
                 if (expired) {
                     // Create persistent dark bullet hole on surface
-                    const holeGeo = new THREE.SphereGeometry(0.15, 8, 8);
-                    const holeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+                    const holeGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                    const holeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
                     const hole = new THREE.Mesh(holeGeo, holeMat);
                     hole.position.copy(this.mesh.position);
+                    hole.scale.set(1, 0.1, 1); // Flatten to look like a surface hole
                     this.scene.add(hole);
                 }
                 return expired;
