@@ -204,27 +204,58 @@
                 if (this.isPlayer) {
                     for (let i = this.zombies.length - 1; i >= 0; i--) {
                         if (this.mesh.position.distanceTo(this.zombies[i].group.position) < 2.5) {
-                            // Create persistent red bullet hole on zombie
-                            const holeGeo = new THREE.SphereGeometry(0.12, 8, 8);
-                            const holeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                            // Realistic bullet hole on zombie (flat dark disc)
+                            const holeGeo = new THREE.CircleGeometry(0.15, 12);
+                            const holeMat = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.DoubleSide });
                             const hole = new THREE.Mesh(holeGeo, holeMat);
                             const localPos = this.zombies[i].group.worldToLocal(this.mesh.position.clone());
                             hole.position.copy(localPos);
+                            hole.lookAt(this.mesh.position); // Face outward
                             this.zombies[i].group.add(hole);
+                            
+                            // Blood splatter effect
+                            const bloodStainGeo = new THREE.CircleGeometry(0.25 + Math.random()*0.15, 8);
+                            const bloodStainMat = new THREE.MeshBasicMaterial({ color: 0x880000, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+                            const bloodStain = new THREE.Mesh(bloodStainGeo, bloodStainMat);
+                            bloodStain.position.copy(localPos).add(new THREE.Vector3((Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2));
+                            bloodStain.lookAt(this.mesh.position);
+                            this.zombies[i].group.add(bloodStain);
+                            
+                            // Falling blood droplets
+                            for(let d=0; d<3; d++) {
+                                const dropGeo = new THREE.SphereGeometry(0.05, 4, 4);
+                                const dropMat = new THREE.MeshBasicMaterial({ color: 0xaa0000 });
+                                const drop = new THREE.Mesh(dropGeo, dropMat);
+                                drop.position.copy(this.mesh.position);
+                                drop.userData = { vy: -2 - Math.random()*2, life: 1.5 };
+                                this.scene.add(drop);
+                                // Simple gravity update for drops
+                                const updateDrop = () => {
+                                    if (!drop.parent) return;
+                                    drop.userData.vy -= 9.8 * 0.016;
+                                    drop.position.y += drop.userData.vy * 0.016;
+                                    drop.userData.life -= 0.016;
+                                    drop.material.opacity = Math.max(0, drop.userData.life);
+                                    drop.material.transparent = true;
+                                    if (drop.userData.life <= 0) this.scene.remove(drop);
+                                    else requestAnimationFrame(updateDrop);
+                                };
+                                requestAnimationFrame(updateDrop);
+                            }
                             
                             if (this.zombies[i].takeDamage()) this.zombies.splice(i, 1);
                             return true;
                         }
                     }
                 }
-                let expired = (performance.now() - this.startTime > 5000);
+                let expired = (performance.now() - this.startTime > 1500); // Shorter lifetime for faster surface holes
                 if (expired) {
                     // Create persistent dark bullet hole on surface
-                    const holeGeo = new THREE.SphereGeometry(0.2, 8, 8);
-                    const holeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+                    const holeGeo = new THREE.CircleGeometry(0.25, 16);
+                    const holeMat = new THREE.MeshStandardMaterial({ color: 0x444444, emissive: 0x222222, emissiveIntensity: 0.5, side: THREE.DoubleSide });
                     const hole = new THREE.Mesh(holeGeo, holeMat);
                     hole.position.copy(this.mesh.position);
-                    hole.scale.set(1, 0.1, 1); // Flatten to look like a surface hole
+                    hole.lookAt(this.mesh.position.clone().add(this.direction)); // Face bullet direction
                     this.scene.add(hole);
                 }
                 return expired;
@@ -350,6 +381,25 @@
             const bullet = new Bullet(startPos, targetPos, 0x00ffcc, true, scene, controls, zombies, playerDamage);
             bullets.push(bullet);
             scene.add(bullet.mesh);
+
+            // Instant surface impact via raycasting
+            const raycaster = new THREE.Raycaster(startPos, dir, 1, 100);
+            const hits = raycaster.intersectObjects(scene.children, true);
+            // Filter out zombies, bullets, and the player
+            const validHit = hits.find(h => {
+                const obj = h.object;
+                return obj !== bullet.mesh && !zombies.some(z => obj === z.group || z.group.children.includes(obj));
+            });
+            
+            if (validHit) {
+                // Create persistent dark bullet hole on surface immediately
+                const holeGeo = new THREE.CircleGeometry(0.25, 16);
+                const holeMat = new THREE.MeshStandardMaterial({ color: 0x444444, emissive: 0x222222, emissiveIntensity: 0.5, side: THREE.DoubleSide });
+                const hole = new THREE.Mesh(holeGeo, holeMat);
+                hole.position.copy(validHit.point);
+                hole.lookAt(validHit.point.clone().add(validHit.face.normal));
+                scene.add(hole);
+            }
         }
 
         function playerDamage(amt) {
