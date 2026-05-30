@@ -4,110 +4,551 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LocalAgent Arcade</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-magenta: #ff00aa;
+            --neon-yellow: #ffe600;
+            --neon-green: #39ff14;
+            --neon-orange: #ff6a00;
+            --neon-purple: #b44aff;
+            --bg-dark: #0a0a12;
+            --bg-card: #12121e;
+            --bg-card-hover: #1a1a2e;
+        }
+
         body {
-            background: #202028;
+            background: var(--bg-dark);
             color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
             min-height: 100vh;
         }
-        h1 { font-size: 3em; margin-bottom: 0.5em; color: #fdfdfd; text-shadow: 2px 2px #000; }
-        .arcade-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            max-width: 800px;
-            width: 90%;
+
+        /* Animated grid background */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: gridScroll 20s linear infinite;
         }
+
+        @keyframes gridScroll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(60px); }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            opacity: 0;
+            animation: floatUp linear infinite;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translateY(100vh) scale(0); }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+        }
+
+        /* CRT scanline overlay */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.03) 2px,
+                rgba(0, 0, 0, 0.03) 4px
+            );
+        }
+
+        /* Main container */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Hero section */
+        .hero {
+            text-align: center;
+            padding: 80px 0 60px;
+        }
+
+        .hero-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: clamp(1.8rem, 5vw, 3.5rem);
+            letter-spacing: 4px;
+            line-height: 1.4;
+            margin-bottom: 16px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta), var(--neon-yellow), var(--neon-cyan));
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 30px rgba(0, 240, 255, 0.3));
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 400;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hero-divider {
+            width: 120px;
+            height: 2px;
+            margin: 30px auto 0;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+        }
+
+        /* Games grid */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            padding-bottom: 80px;
+        }
+
+        /* Game card */
         .game-card {
-            background: #2c2c36;
-            border: 3px solid #444;
-            border-radius: 15px;
-            padding: 20px;
-            cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
+            position: relative;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 28px;
             text-decoration: none;
             color: inherit;
+            overflow: hidden;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--card-accent);
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .game-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
         .game-card:hover {
-            transform: scale(1.05);
-            border-color: #00ffcc;
-            background: #363645;
+            transform: translateY(-4px);
+            border-color: var(--card-accent);
+            box-shadow: 0 8px 40px -8px var(--card-glow);
         }
-        .game-card h2 { margin-top: 0; color: #00ffcc; }
-        .game-card p { font-size: 0.9em; color: #ccc; }
-        .icon { font-size: 4em; margin-bottom: 15px; display: block; }
+
+        .game-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            flex-shrink: 0;
+        }
+
+        .card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--card-accent);
+            margin-bottom: 4px;
+        }
+
+        .card-genre {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .card-tag {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .card-play {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--card-accent);
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .game-card:hover .card-play {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Card accent colors */
+        .game-card[data-accent="cyan"] { --card-accent: var(--neon-cyan); --card-glow: rgba(0, 240, 255, 0.15); }
+        .game-card[data-accent="magenta"] { --card-accent: var(--neon-magenta); --card-glow: rgba(255, 0, 170, 0.15); }
+        .game-card[data-accent="yellow"] { --card-accent: var(--neon-yellow); --card-glow: rgba(255, 230, 0, 0.15); }
+        .game-card[data-accent="green"] { --card-accent: var(--neon-green); --card-glow: rgba(57, 255, 20, 0.15); }
+        .game-card[data-accent="orange"] { --card-accent: var(--neon-orange); --card-glow: rgba(255, 106, 0, 0.15); }
+        .game-card[data-accent="purple"] { --card-accent: var(--neon-purple); --card-glow: rgba(180, 74, 255, 0.15); }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 40px 0 60px;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        .footer a {
+            color: var(--neon-cyan);
+            text-decoration: none;
+        }
+
+        /* Entrance animations */
+        .game-card {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardIn 0.5s ease forwards;
+        }
+
+        @keyframes cardIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .game-card:nth-child(1) { animation-delay: 0.05s; }
+        .game-card:nth-child(2) { animation-delay: 0.1s; }
+        .game-card:nth-child(3) { animation-delay: 0.15s; }
+        .game-card:nth-child(4) { animation-delay: 0.2s; }
+        .game-card:nth-child(5) { animation-delay: 0.25s; }
+        .game-card:nth-child(6) { animation-delay: 0.3s; }
+        .game-card:nth-child(7) { animation-delay: 0.35s; }
+        .game-card:nth-child(8) { animation-delay: 0.4s; }
+        .game-card:nth-child(9) { animation-delay: 0.45s; }
+        .game-card:nth-child(10) { animation-delay: 0.5s; }
+        .game-card:nth-child(11) { animation-delay: 0.55s; }
+        .game-card:nth-child(12) { animation-delay: 0.6s; }
+
+        /* Responsive */
+        @media (max-width: 720px) {
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero {
+                padding: 60px 0 40px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>🕹️ LocalAgent Arcade</h1>
-    <div class="arcade-container">
-        <a href="tetris/index.html" class="game-card">
-            <span class="icon">🧱</span>
-            <h2>Retro Tetris</h2>
-            <p>Classic block stacker. Optimized for mobile and desktop.</p>
-        </a>
-        <a href="flappybird/index.html" class="game-card">
-            <span class="icon">🐦</span>
-            <h2>Flappy Bird</h2>
-            <p>Don't crash into the pipes! Simple and addictive.</p>
-        </a>
-        <a href="flightsim/index.html" class="game-card">
-            <span class="icon">🛩️</span>
-            <h2>3D Flight Sim</h2>
-            <p>Take to the skies in this 3D simulator. Fly through the mountains!</p>
-        </a>
-        <a href="snake/index.html" class="game-card">
-            <span class="icon">🐍</span>
-            <h2>Neon Snake</h2>
-            <p>Retro snake with a modern glow. Fast-paced action!</p>
-        </a>
-        <a href="city-drive/index.html" class="game-card">
-            <span class="icon">🏙️</span>
-            <h2>City Drive 3D</h2>
-            <p>Freely explore a 3D city. Walk or jump in a car and drive!</p>
-        </a>
-        <a href="subway/index.html" class="game-card">
-            <span class="icon">🚇</span>
-            <h2>Station 402</h2>
-            <p>A beautifully detailed 3D atmosphere. Explore the echoes of the underground.</p>
-        </a>
-        <a href="racing/index.html" class="game-card">
-            <span class="icon">🏎️</span>
-            <h2>Night Racer</h2>
-            <p>High-speed 3D cyberpunk racing. Dodge obstacles and collect power-ups!</p>
-        </a>
-        <a href="neon-runner/index.html" class="game-card">
-            <span class="icon">🏃</span>
-            <h2>Neon Dash</h2>
-            <p>Run through the grid! Jump, dodge, and slide your way through infinite obstacles.</p>
-        </a>
-        <a href="neon-strike/index.html" class="game-card">
-            <span class="icon">🔫</span>
-            <h2>Neon Strike</h2>
-            <p>3D First Person Shooter. Defend the arena from waves of neon enemies!</p>
-        </a>
-        <a href="asteroids/index.html" class="game-card">
-            <span class="icon">💫</span>
-            <h2>Cosmoclasm</h2>
-            <p>Neon asteroids shooter. Blast rocks, survive waves, dominate the galaxy!</p>
-        </a>
-        <a href="chess/index.html" class="game-card">
-            <span class="icon">♟️</span>
-            <h2>Neon Chess</h2>
-            <p>Classic strategy meets cyberpunk. Play against an AI bot with neon glow!</p>
-        </a>
-        <a href="venice-skate/index.html" class="game-card">
-            <span class="icon">🛹</span>
-            <h2>Venice Beach Skater</h2>
-            <p>3D skateboarding on the Venice Beach boardwalk. Ollie, grind, and combo!</p>
-        </a>
+    <div class="grid-bg"></div>
+    <div class="particles" id="particles"></div>
+    <div class="scanlines"></div>
+
+    <div class="container">
+        <header class="hero">
+            <h1 class="hero-title">LOCALAGENT ARCADE</h1>
+            <p class="hero-subtitle">12 games &middot; zero installs &middot; pure play</p>
+            <div class="hero-divider"></div>
+        </header>
+
+        <div class="games-grid">
+            <a href="tetris/index.html" class="game-card" data-accent="cyan">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F9F1;</div>
+                    <div class="card-info">
+                        <div class="card-title">RETRO TETRIS</div>
+                        <div class="card-genre">Puzzle</div>
+                    </div>
+                </div>
+                <div class="card-description">Classic block stacking action. Fall into the rhythm and clear the board.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Arcade Classic</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="flappybird/index.html" class="game-card" data-accent="yellow">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F426;</div>
+                    <div class="card-info">
+                        <div class="card-title">FLAPPY BIRD</div>
+                        <div class="card-genre">Arcade</div>
+                    </div>
+                </div>
+                <div class="card-description">Tap to fly. Dodge the pipes. One wrong move and it's all over.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Addictive</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="snake/index.html" class="game-card" data-accent="green">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F40D;</div>
+                    <div class="card-info">
+                        <div class="card-title">NEON SNAKE</div>
+                        <div class="card-genre">Arcade</div>
+                    </div>
+                </div>
+                <div class="card-description">Retro snake with a modern neon glow. Grow longer, go faster.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Timeless</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="asteroids/index.html" class="game-card" data-accent="magenta">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F4AB;</div>
+                    <div class="card-info">
+                        <div class="card-title">COSMOCLASM</div>
+                        <div class="card-genre">Shooter</div>
+                    </div>
+                </div>
+                <div class="card-description">Blast asteroids, survive endless waves, and dominate the galaxy in neon.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Space Action</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="neon-strike/index.html" class="game-card" data-accent="orange">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F52B;</div>
+                    <div class="card-info">
+                        <div class="card-title">NEON STRIKE</div>
+                        <div class="card-genre">FPS</div>
+                    </div>
+                </div>
+                <div class="card-description">Defend the arena from waves of neon enemies. First-person chaos.</div>
+                <div class="card-footer">
+                    <span class="card-tag">3D Shooter</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="neon-runner/index.html" class="game-card" data-accent="cyan">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F3C3;</div>
+                    <div class="card-info">
+                        <div class="card-title">NEON DASH</div>
+                        <div class="card-genre">Runner</div>
+                    </div>
+                </div>
+                <div class="card-description">Run through the grid. Jump, dodge, and slide through infinite obstacles.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Endless</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="racing/index.html" class="game-card" data-accent="magenta">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F3CE;</div>
+                    <div class="card-info">
+                        <div class="card-title">NIGHT RACER</div>
+                        <div class="card-genre">Racing</div>
+                    </div>
+                </div>
+                <div class="card-description">High-speed cyberpunk racing. Dodge obstacles and collect power-ups.</div>
+                <div class="card-footer">
+                    <span class="card-tag">3D Racing</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="flightsim/index.html" class="game-card" data-accent="purple">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F6E9;</div>
+                    <div class="card-info">
+                        <div class="card-title">3D FLIGHT SIM</div>
+                        <div class="card-genre">Simulation</div>
+                    </div>
+                </div>
+                <div class="card-description">Take to the skies and fly through mountainous terrain. Feel the altitude.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Open World</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="city-drive/index.html" class="game-card" data-accent="green">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F3D9;</div>
+                    <div class="card-info">
+                        <div class="card-title">CITY DRIVE 3D</div>
+                        <div class="card-genre">Exploration</div>
+                    </div>
+                </div>
+                <div class="card-description">Freely explore a 3D city. Walk the streets or jump in a car and cruise.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Open World</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="subway/index.html" class="game-card" data-accent="yellow">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F687;</div>
+                    <div class="card-info">
+                        <div class="card-title">STATION 402</div>
+                        <div class="card-genre">Atmospheric</div>
+                    </div>
+                </div>
+                <div class="card-description">A beautifully detailed 3D atmosphere. Explore the echoes of the underground.</div>
+                <div class="card-footer">
+                    <span class="card-tag">Immersive</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="chess/index.html" class="game-card" data-accent="purple">
+                <div class="card-header">
+                    <div class="card-icon">&#x265F;</div>
+                    <div class="card-info">
+                        <div class="card-title">NEON CHESS</div>
+                        <div class="card-genre">Strategy</div>
+                    </div>
+                </div>
+                <div class="card-description">Classic strategy meets cyberpunk aesthetics. Challenge the AI with neon glow.</div>
+                <div class="card-footer">
+                    <span class="card-tag">vs AI</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+
+            <a href="venice-skate/index.html" class="game-card" data-accent="orange">
+                <div class="card-header">
+                    <div class="card-icon">&#x1F6F9;</div>
+                    <div class="card-info">
+                        <div class="card-title">VENICE BEACH SKATER</div>
+                        <div class="card-genre">Sports</div>
+                    </div>
+                </div>
+                <div class="card-description">3D skateboarding on the Venice Beach boardwalk. Ollie, grind, and combo!</div>
+                <div class="card-footer">
+                    <span class="card-tag">3D Action</span>
+                    <span class="card-play">Play &rarr;</span>
+                </div>
+            </a>
+        </div>
+
+        <footer class="footer">
+            LOCALAGENT ARCADE &copy; 2026 &middot; Built with code &amp; caffeine
+        </footer>
     </div>
+
+    <script>
+        // Floating particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = (8 + Math.random() * 12) + 's';
+            p.style.animationDelay = (Math.random() * 10) + 's';
+            p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+            const colors = ['#00f0ff', '#ff00aa', '#ffe600', '#39ff14', '#b44aff'];
+            p.style.background = colors[Math.floor(Math.random() * colors.length)];
+            particlesContainer.appendChild(p);
+        }
+
+        // Mouse-follow glow on cards
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                card.style.setProperty('--mouse-x', ((e.clientX - rect.left) / rect.width * 100) + '%');
+                card.style.setProperty('--mouse-y', ((e.clientY - rect.top) / rect.height * 100) + '%');
+            });
+        });
+    </script>
 </body>
 </html>
