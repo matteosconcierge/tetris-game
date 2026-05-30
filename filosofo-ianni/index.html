@@ -301,6 +301,7 @@
             <p class="subtitle">Guida il Filosofo Ianni nella sua grotta tibetana della Ciociaria</p>
             <p>Raccogli gelato, polenta e cornetti per accumulare saggezza.</p>
             <p>Evita i Fanciulli Smarriti che cadono dal cielo in cerca di saggezza!</p>
+            <p><em>Raggiungi il tappetino di meditazione per scoprire il messaggio del Filosofo...</em></p>
             <div class="controls">
                 ← → per muoverti · SPAZIO per saltare<br>
                 Raggiungi il tappetino di meditazione alla fine della grotta
@@ -308,7 +309,7 @@
             <button class="btn" onclick="startGame()">Inizia il Viaggio</button>
         </div>
         <div id="questionPanel" class="hidden">
-            <h3>Il Fanciullo Smarrito chiede:</h3>
+            <h3>🧘 Il Filosofo Ianni ti scrive:</h3>
             <p class="question-text" id="qText"></p>
             <div id="qAnswers"></div>
         </div>
@@ -417,36 +418,15 @@ let obstacleTimer = 0;
 // Shrine position
 const SHRINE_X = 3050;
 
-// Questions
-const questions = [
-    {
-        q: "Perché Achille non potrà mai raggiungere la tartaruga?",
-        answers: [
-            "Perché gli è venuto un crampo al tallone ed è morto!",
-            "Perché Zeno di Elea era un gran rompiscatole",
-            "Perché la tartaruga ha preso il Frecciarossa"
-        ],
-        correct: 0
-    },
-    {
-        q: "Qual è l'essenza del relativismo sofistico?",
-        answers: [
-            "Che ogni verità è relativa al gusto personale",
-            "Che a me piace il gelato al pistacchio, e pure a te",
-            "Che Protagora aveva ragione su tutto"
-        ],
-        correct: 1
-    },
-    {
-        q: "Cosa risponde il saggio quando gli chiedono il senso della vita?",
-        answers: [
-            "Il senso della vita è un concetto troppo astratto",
-            "Ti piace la polenta? Ah, pure a me! Allora ci vediamo!",
-            "42, ma senza virgola"
-        ],
-        correct: 1
-    }
-];
+// Invitation (shown at shrine)
+const invitation = {
+    q: "Oh, saggio Bruno... sono a Roma la settimana prossima, dal lunedì al venerdì. Scegli la tua avventura:",
+    answers: [
+        "🍺 Birra artigianale",
+        "☕ Caffè ristretto",
+        "🍽️ Cena completa"
+    ]
+};
 
 // Input
 const keys = {};
@@ -664,39 +644,31 @@ function update() {
 }
 
 function showQuestion() {
-    const q = questions[Math.floor(Math.random() * questions.length)];
-    qText.textContent = `"${q.q}"`;
+    const inv = invitation;
+    qText.textContent = `"${inv.q}"`;
     qAnswers.innerHTML = '';
-    q.answers.forEach((ans, i) => {
+    inv.answers.forEach((ans) => {
         const btn = document.createElement('button');
         btn.className = 'answer-btn';
         btn.textContent = ans;
-        btn.onclick = () => answerQuestion(i === q.correct);
+        btn.onclick = () => answerQuestion(ans);
         qAnswers.appendChild(btn);
     });
     questionPanel.classList.remove('hidden');
 }
 
-function answerQuestion(correct) {
+function answerQuestion(choice) {
     questionPanel.classList.add('hidden');
     const mobileControls = document.getElementById('mobileControls');
     if (mobileControls) mobileControls.style.display = 'none';
-    if (correct) {
-        overlay.innerHTML = `
-            <h1>🧘 Il Filosofo ha parlato!</h1>
-            <p class="subtitle">La saggezza trionfa ancora una volta nella grotta della Ciociaria</p>
-            <p>Hai raccolto <strong>${player.wisdom}</strong> punti saggezza e <strong>${player.pearls}</strong> perle!</p>
-            <p>Il Fanciullo Smarrito è tornato a casa illuminato... e con voglia di gelato.</p>
-            <button class="btn" onclick="startGame()">Gioca Ancora</button>
-        `;
-    } else {
-        overlay.innerHTML = `
-            <h1>😕 Hmm, non proprio...</h1>
-            <p class="subtitle">Il Filosofo Ianni ti guarda confuso mentre morde un cornetto</p>
-            <p>La risposta corretta avrebbe riguardato il gelato al pistacchio, ovviamente.</p>
-            <button class="btn" onclick="startGame()">Riprova</button>
-        `;
-    }
+    overlay.innerHTML = `
+        <h1>🧘 Il Filosofo ha parlato!</h1>
+        <p class="subtitle">La saggezza trionfa ancora una volta nella grotta della Ciociaria</p>
+        <p>Hai raccolto <strong>${player.wisdom}</strong> punti saggezza e <strong>${player.pearls}</strong> perle!</p>
+        <p>Hai scelto: <strong style="color: #C9A84C;">${choice}</strong></p>
+        <p>Matteo ti aspetta a Roma. Ci vediamo presto!</p>
+        <button class="btn" onclick="startGame()">Gioca Ancora</button>
+    `;
     overlay.classList.remove('hidden');
 }
 
