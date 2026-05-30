@@ -300,7 +300,7 @@
             <h1>La Grotta della Saggezza</h1>
             <p class="subtitle">Guida il Filosofo Ianni nella sua grotta tibetana della Ciociaria</p>
             <p>Raccogli gelato, polenta e cornetti per accumulare saggezza.</p>
-            <p>Evita i documenti legali che cadono dall'Avvocato Ianni di sopra!</p>
+            <p>Evita i Fanciulli Smarriti che cadono dal cielo in cerca di saggezza!</p>
             <div class="controls">
                 ← → per muoverti · SPAZIO per saltare<br>
                 Raggiungi il tappetino di meditazione alla fine della grotta
@@ -410,7 +410,7 @@ const collectibles = [
     [3100, 370, 'pearl'],
 ];
 
-// Obstacles (falling papers) - spawned dynamically
+// Obstacles (falling lost children) - spawned dynamically
 let obstacles = [];
 let obstacleTimer = 0;
 
@@ -508,13 +508,12 @@ function startGame() {
 }
 
 function spawnObstacle() {
-    const type = Math.random() < 0.5 ? 'paper' : 'gavel';
     obstacles.push({
         x: camera.x + Math.random() * canvas.width,
         y: -30,
-        w: 24, h: 24,
+        w: 20, h: 32,
         vy: 2 + Math.random() * 2,
-        type: type
+        type: 'fanciullo'
     });
 }
 
@@ -876,25 +875,74 @@ function draw() {
         ctx.restore();
     }
 
-    // Obstacles
+    // Obstacles (falling lost children)
     for (const obs of obstacles) {
         ctx.save();
         ctx.translate(obs.x, obs.y);
-        ctx.rotate(Date.now() / 200);
-        if (obs.type === 'paper') {
-            ctx.fillStyle = '#f5f5dc';
-            ctx.fillRect(-10, -12, 20, 24);
-            ctx.fillStyle = '#8B2635';
-            ctx.fillRect(-8, -8, 16, 2);
-            ctx.fillRect(-8, -4, 12, 2);
-            ctx.fillRect(-8, 0, 14, 2);
-        } else {
-            // Gavel
-            ctx.fillStyle = '#5a3a1a';
-            ctx.fillRect(-3, -12, 6, 24);
-            ctx.fillStyle = '#8B2635';
-            ctx.fillRect(-12, -16, 24, 8);
-        }
+        // Fanciullo Smarrito - small child falling
+        // Head
+        ctx.fillStyle = '#e8c4a0';
+        ctx.beginPath();
+        ctx.arc(0, -10, 7, 0, Math.PI * 2);
+        ctx.fill();
+        // Hair
+        ctx.fillStyle = '#5a3a2a';
+        ctx.beginPath();
+        ctx.arc(0, -13, 7.5, Math.PI, 0);
+        ctx.fill();
+        // Eyes (wide/confused)
+        ctx.fillStyle = '#2c2c2c';
+        ctx.beginPath();
+        ctx.arc(-2.5, -10, 1.2, 0, Math.PI * 2);
+        ctx.arc(2.5, -10, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        // Mouth (small o)
+        ctx.fillStyle = '#8B2635';
+        ctx.beginPath();
+        ctx.arc(0, -7, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Body
+        ctx.fillStyle = '#6B8E6B';
+        ctx.beginPath();
+        ctx.moveTo(-6, -3);
+        ctx.lineTo(6, -3);
+        ctx.lineTo(4, 10);
+        ctx.lineTo(-4, 10);
+        ctx.closePath();
+        ctx.fill();
+        // Arms (reaching up)
+        ctx.strokeStyle = '#e8c4a0';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-5, 0);
+        ctx.lineTo(-10, -8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(5, 0);
+        ctx.lineTo(10, -8);
+        ctx.stroke();
+        // Legs
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.beginPath();
+        ctx.moveTo(-2, 10);
+        ctx.lineTo(-3, 18);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(2, 10);
+        ctx.lineTo(3, 18);
+        ctx.stroke();
+        // Thought bubble with "?"
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath();
+        ctx.arc(10, -20, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(7, -14, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2c2c2c';
+        ctx.font = 'bold 5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('?', 10, -19);
         ctx.restore();
     }
 
