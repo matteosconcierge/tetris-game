@@ -236,6 +236,8 @@ function createBench(x, z, rotY = 0) {
     group.position.set(x, 0, z);
     group.rotation.y = rotY;
     scene.add(group);
+    // Register collider (world-aligned approx)
+    colliders.push({ type: 'wall', x, z, width: 3.4, depth: 1.0 });
     return group;
 }
 
@@ -281,11 +283,13 @@ function createRamp(x, z, width = 4) {
 
     group.position.set(x, 0, z);
     scene.add(group);
+    colliders.push({ type: 'ramp', x, z, width: width + 0.6, depth: 5.5 });
     return { mesh: group, type: 'ramp' };
 }
 
 // Place obstacles
 const obstacles = [];
+const colliders = [];
 obstacles.push(createGrindRail(-30, -2, 8, 0));
 obstacles.push(createGrindRail(30, 2, 8, Math.PI / 2));
 obstacles.push(createGrindRail(0, -5, 6, Math.PI / 4));
@@ -303,6 +307,7 @@ const wall = new THREE.Mesh(wallGeo, wallMat);
 wall.position.set(-80, 1.5, -5);
 wall.castShadow = true;
 scene.add(wall);
+colliders.push({ type: 'wall', x: -80, z: -5, width: 21, depth: 1.2 });
 
 // ─── SKATER ───
 const skaterGroup = new THREE.Group();
@@ -477,6 +482,52 @@ function checkObstacles() {
     }
 }
 
+
+function resolveCollision(newPos) {
+    for (const c of colliders) {
+        if (c.type === 'wall') {
+            const halfW = c.width / 2 + 0.35;
+            const halfD = c.depth / 2 + 0.35;
+            if (newPos.x > c.x - halfW && newPos.x < c.x + halfW &&
+                newPos.z > c.z - halfD && newPos.z < c.z + halfD) {
+                const dx = newPos.x - c.x;
+                const dz = newPos.z - c.z;
+                const overlapX = halfW - Math.abs(dx);
+                const overlapZ = halfD - Math.abs(dz);
+                if (overlapX < overlapZ) {
+                    newPos.x += dx > 0 ? overlapX : -overlapX;
+                } else {
+                    newPos.z += dz > 0 ? overlapZ : -overlapZ;
+                }
+            }
+        } else if (c.type === 'ramp') {
+            const halfW = c.width / 2;
+            const halfD = c.depth / 2;
+            if (newPos.x > c.x - halfW && newPos.x < c.x + halfW &&
+                newPos.z > c.z - halfD && newPos.z < c.z + halfD) {
+                // Ramp surface: rises from back to front
+                const t = (newPos.z - (c.z - halfD)) / c.depth; // 0 = back, 1 = front
+                const rampY = 0.2 + t * 1.1;
+                if (newPos.y <= rampY + 0.15) {
+                    newPos.y = rampY;
+                    state.onGround = true;
+                    if (state.vel.y < 0) state.vel.y = 0;
+                    // Launch off the front edge at speed
+                    if (t > 0.85 && state.speed > 6) {
+                        state.vel.y = 5.5;
+                        state.onGround = false;
+                        state.combo++;
+                        state.comboTimer = 2;
+                        showTrick('Ramp Launch!', 200 * state.combo);
+                        state.score += 200 * state.combo;
+                    }
+                }
+            }
+        }
+    }
+    return newPos;
+}
+
 function update(dt) {
     // Input
     let forward = 0, turn = 0;
@@ -551,6 +602,9 @@ function update(dt) {
 
     // Position
     state.pos.add(new THREE.Vector3(state.vel.x * dt, state.vel.y * dt, state.vel.z * dt));
+
+    // Resolve collisions with walls and ramps
+    state.pos = resolveCollision(state.pos.clone());
 
     // Ground collision
     if (state.pos.y <= 0.2) {
