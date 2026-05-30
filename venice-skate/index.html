@@ -578,7 +578,7 @@ function update(dt) {
 
     // Update skater mesh
     skaterGroup.position.copy(state.pos);
-    skaterGroup.rotation.y = state.angle + Math.PI;
+    skaterGroup.rotation.y = Math.PI / 2 - state.angle;
 
     // Tilt when turning
     skaterGroup.rotation.z = turn * 0.15;
