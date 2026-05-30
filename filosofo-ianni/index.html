@@ -36,6 +36,19 @@
             aspect-ratio: 800 / 450;
         }
 
+        /* fallback for aspect-ratio on older browsers */
+        @supports not (aspect-ratio: 800 / 450) {
+            #gameContainer {
+                height: 0;
+                padding-top: 56.25%;
+            }
+            canvas {
+                position: absolute;
+                top: 0;
+                left: 0;
+            }
+        }
+
         canvas {
             display: block;
             width: 100%;
@@ -289,15 +302,15 @@
             <p class="question-text" id="qText"></p>
             <div id="qAnswers"></div>
         </div>
-    </div>
-    <div id="mobileControls">
-        <div class="ctrl-row">
-            <div class="ctrl-group">
-                <div class="ctrl-btn" id="btnLeft">&#9664;</div>
-                <div class="ctrl-btn" id="btnRight">&#9654;</div>
-            </div>
-            <div class="ctrl-group">
-                <div class="ctrl-btn ctrl-jump" id="btnJump">SALTO</div>
+        <div id="mobileControls">
+            <div class="ctrl-row">
+                <div class="ctrl-group">
+                    <div class="ctrl-btn" id="btnLeft">&#9664;</div>
+                    <div class="ctrl-btn" id="btnRight">&#9654;</div>
+                </div>
+                <div class="ctrl-group">
+                    <div class="ctrl-btn ctrl-jump" id="btnJump">SALTO</div>
+                </div>
             </div>
         </div>
     </div>
@@ -469,6 +482,8 @@ setupMobileBtn('btnJump', 'Space');
 function startGame() {
     overlay.classList.add('hidden');
     questionPanel.classList.add('hidden');
+    const mobileControls = document.getElementById('mobileControls');
+    if (mobileControls) mobileControls.style.display = 'block';
     gameRunning = true;
     gameWon = false;
     player.x = 100; player.y = 300;
@@ -655,6 +670,8 @@ function showQuestion() {
 
 function answerQuestion(correct) {
     questionPanel.classList.add('hidden');
+    const mobileControls = document.getElementById('mobileControls');
+    if (mobileControls) mobileControls.style.display = 'none';
     if (correct) {
         overlay.innerHTML = `
             <h1>🧘 Il Filosofo ha parlato!</h1>
