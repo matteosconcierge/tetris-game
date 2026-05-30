@@ -223,36 +223,33 @@
 
         #mobileControls {
             display: none;
-            position: absolute;
-            bottom: 8px;
-            left: 0;
-            right: 0;
-            padding: 0 12px 8px;
+            width: 100%;
+            max-width: 900px;
+            padding: 8px 12px;
             z-index: 15;
-            pointer-events: none;
         }
 
         .ctrl-row {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: center;
             pointer-events: none;
         }
 
         .ctrl-group {
             display: flex;
-            gap: 8px;
+            gap: 12px;
             pointer-events: auto;
         }
 
         .ctrl-btn {
-            width: 56px;
-            height: 56px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
             background: rgba(201,168,76,0.15);
             border: 1px solid rgba(201,168,76,0.35);
             color: #C9A84C;
-            font-size: 22px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -268,16 +265,18 @@
         }
 
         .ctrl-jump {
-            width: 64px;
-            height: 64px;
+            width: 72px;
+            height: 72px;
             background: rgba(139,38,53,0.25);
             border-color: rgba(139,38,53,0.45);
             color: #FDF6E3;
-            font-size: 18px;
+            font-size: 20px;
         }
 
-        @media (hover: none) and (pointer: coarse) {
-            #mobileControls { display: block; }
+        @media (max-width: 600px) {
+            #mobileControls { padding: 6px 8px; }
+            .ctrl-btn { width: 56px; height: 56px; font-size: 22px; }
+            .ctrl-jump { width: 64px; height: 64px; font-size: 18px; }
         }
     </style>
 </head>
@@ -304,15 +303,15 @@
             <p class="question-text" id="qText"></p>
             <div id="qAnswers"></div>
         </div>
-        <div id="mobileControls">
-            <div class="ctrl-row">
-                <div class="ctrl-group">
-                    <div class="ctrl-btn" id="btnLeft">&#9664;</div>
-                    <div class="ctrl-btn" id="btnRight">&#9654;</div>
-                </div>
-                <div class="ctrl-group">
-                    <div class="ctrl-btn ctrl-jump" id="btnJump">SALTO</div>
-                </div>
+    </div>
+    <div id="mobileControls">
+        <div class="ctrl-row">
+            <div class="ctrl-group">
+                <div class="ctrl-btn" id="btnLeft">&#9664;</div>
+                <div class="ctrl-btn" id="btnRight">&#9654;</div>
+            </div>
+            <div class="ctrl-group">
+                <div class="ctrl-btn ctrl-jump" id="btnJump">SALTO</div>
             </div>
         </div>
     </div>
