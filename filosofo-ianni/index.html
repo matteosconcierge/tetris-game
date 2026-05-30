@@ -19,10 +19,11 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            min-height: 100dvh;
             font-family: 'Cormorant Garamond', serif;
             overflow: hidden;
             color: #FDF6E3;
+            touch-action: none;
         }
 
         #gameContainer {
@@ -30,10 +31,15 @@
             box-shadow: 0 0 40px rgba(201,168,76,0.15);
             border-radius: 8px;
             overflow: hidden;
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 800 / 450;
         }
 
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
             background: #2a2018;
             border-radius: 8px;
         }
@@ -190,8 +196,73 @@
 
         @media (max-width: 600px) {
             body { padding: 0; }
-            #gameContainer { border-radius: 0; }
+            #gameContainer { border-radius: 0; max-width: 100%; }
             canvas { border-radius: 0; }
+            #overlay { padding: 1rem; }
+            #overlay h1 { font-size: 1.5rem; }
+            #overlay .subtitle { font-size: 0.95rem; margin-bottom: 1rem; }
+            #overlay p { font-size: 0.9rem; }
+            .btn { padding: 10px 24px; font-size: 1rem; }
+            #questionPanel { padding: 1.2rem; width: 95%; }
+        }
+
+        #mobileControls {
+            display: none;
+            position: absolute;
+            bottom: 8px;
+            left: 0;
+            right: 0;
+            padding: 0 12px 8px;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .ctrl-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+        }
+
+        .ctrl-group {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .ctrl-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(201,168,76,0.15);
+            border: 1px solid rgba(201,168,76,0.35);
+            color: #C9A84C;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            backdrop-filter: blur(4px);
+        }
+
+        .ctrl-btn:active {
+            background: rgba(201,168,76,0.35);
+            transform: scale(0.95);
+        }
+
+        .ctrl-jump {
+            width: 64px;
+            height: 64px;
+            background: rgba(139,38,53,0.25);
+            border-color: rgba(139,38,53,0.45);
+            color: #FDF6E3;
+            font-size: 18px;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            #mobileControls { display: block; }
         }
     </style>
 </head>
@@ -217,6 +288,17 @@
             <h3>Il Fanciullo Smarrito chiede:</h3>
             <p class="question-text" id="qText"></p>
             <div id="qAnswers"></div>
+        </div>
+    </div>
+    <div id="mobileControls">
+        <div class="ctrl-row">
+            <div class="ctrl-group">
+                <div class="ctrl-btn" id="btnLeft">&#9664;</div>
+                <div class="ctrl-btn" id="btnRight">&#9654;</div>
+            </div>
+            <div class="ctrl-group">
+                <div class="ctrl-btn ctrl-jump" id="btnJump">SALTO</div>
+            </div>
         </div>
     </div>
 
@@ -369,6 +451,20 @@ canvas.addEventListener('touchstart', e => {
 canvas.addEventListener('touchend', () => {
     touchLeft = touchRight = touchJump = false;
 });
+
+// Mobile button handlers
+function setupMobileBtn(id, key) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); keys[key] = true; });
+    btn.addEventListener('mouseup', (e) => { e.preventDefault(); keys[key] = false; });
+    btn.addEventListener('mouseleave', (e) => { e.preventDefault(); keys[key] = false; });
+}
+setupMobileBtn('btnLeft', 'ArrowLeft');
+setupMobileBtn('btnRight', 'ArrowRight');
+setupMobileBtn('btnJump', 'Space');
 
 function startGame() {
     overlay.classList.add('hidden');
