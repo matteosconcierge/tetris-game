@@ -49,6 +49,15 @@
             }
         }
 
+        @media (max-width: 600px) {
+            @supports not (aspect-ratio: 800 / 450) {
+                #gameContainer {
+                    height: 52vh;
+                    padding-top: 0;
+                }
+            }
+        }
+
         canvas {
             display: block;
             width: 100%;
@@ -210,15 +219,15 @@
 
         @media (max-width: 600px) {
             body { padding: 0; }
-            #gameContainer { border-radius: 0; max-width: 100%; }
+            #gameContainer { border-radius: 0; max-width: 100%; height: 52vh; min-height: 340px; aspect-ratio: auto; }
             canvas { border-radius: 0; }
-            #overlay { padding: 1rem; justify-content: flex-start; padding-top: 1.5rem; }
+            #overlay { padding: 1rem; justify-content: flex-start; padding-top: 1.5rem; overflow-y: auto; }
             #overlay h1 { font-size: 1.4rem; margin-bottom: 0.3rem; }
             #overlay .subtitle { font-size: 0.9rem; margin-bottom: 0.8rem; }
             #overlay p { font-size: 0.85rem; margin-bottom: 0.3rem; }
             #overlay .controls { margin: 0.8rem 0; padding: 0.6rem 1rem; font-size: 0.75rem; }
             .btn { padding: 10px 24px; font-size: 1rem; margin-top: 0.8rem; }
-            #questionPanel { padding: 1.2rem; width: 95%; }
+            #questionPanel { padding: 1rem; width: 95%; max-height: 90%; overflow-y: auto; }
         }
 
         #mobileControls {
