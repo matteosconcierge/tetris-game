@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Venice Beach Skater 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 15px; left: 15px; color: #fff;
+            background: rgba(0,0,0,0.55); padding: 12px 18px; border-radius: 10px;
+            pointer-events: none; user-select: none;
+        }
+        #ui h2 { margin: 0 0 6px 0; font-size: 1.3em; color: #FFD700; }
+        #score { font-size: 1.1em; color: #00ffcc; }
+        #combo { font-size: 0.9em; color: #ff66aa; margin-top: 4px; }
+        #trick-name {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 2.5em; font-weight: bold; color: #FFD700; text-shadow: 3px 3px #ff3366;
+            pointer-events: none; opacity: 0; transition: opacity 0.3s;
+        }
+        #controls {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            color: #fff; background: rgba(0,0,0,0.55); padding: 10px 18px; border-radius: 10px;
+            text-align: center; font-size: 13px; pointer-events: none;
+        }
+        .back-btn {
+            position: absolute; top: 15px; right: 15px;
+            padding: 8px 14px; background: #ff3366; color: #fff;
+            text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;
+            pointer-events: auto; z-index: 10;
+        }
+        #mobile-controls {
+            position: absolute; bottom: 80px; width: 100%; height: 140px;
+            display: none; justify-content: space-between; align-items: center;
+            padding: 0 25px; box-sizing: border-box; pointer-events: none;
+        }
+        .joystick-zone {
+            width: 110px; height: 110px; background: rgba(255,255,255,0.12);
+            border-radius: 50%; pointer-events: auto; border: 2px solid rgba(255,255,255,0.35);
+            position: relative;
+        }
+        .action-btn {
+            width: 65px; height: 65px; background: rgba(255,200,0,0.65);
+            border-radius: 50%; color: #fff; display: flex; align-items: center;
+            justify-content: center; font-weight: bold; pointer-events: auto;
+            border: 2px solid rgba(255,255,255,0.5); user-select: none;
+            -webkit-tap-highlight-color: transparent; font-size: 12px;
+        }
+        @media (max-width: 768px) {
+            #mobile-controls { display: flex; }
+            #controls { display: none; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="ui">
+        <h2>Venice Beach Skater</h2>
+        <div id="score">Score: 0</div>
+        <div id="combo"></div>
+    </div>
+    <div id="trick-name"></div>
+    <a href="../index.html" class="back-btn">Exit</a>
+    <div id="controls">
+        <b>Move:</b> WASD / Arrows &nbsp;|&nbsp; <b>Ollie:</b> Space &nbsp;|&nbsp; <b>Grind:</b> Approach rails
+    </div>
+    <div id="mobile-controls">
+        <div id="move-stick" class="joystick-zone"></div>
+        <button id="jump-btn" class="action-btn">JUMP</button>
+    </div>
+
+<script>
+// ─── VENICE BEACH SKATER 3D ───
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+scene.fog = new THREE.Fog(0xFFDAB9, 40, 120);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 300);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+// ─── LIGHTING ───
+const hemiLight = new THREE.HemisphereLight(0xffeeb1, 0x080820, 0.6);
+scene.add(hemiLight);
+
+const sunLight = new THREE.DirectionalLight(0xffa726, 1.1);
+sunLight.position.set(60, 80, 40);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 1;
+sunLight.shadow.camera.far = 200;
+sunLight.shadow.camera.left = -80;
+sunLight.shadow.camera.right = 80;
+sunLight.shadow.camera.top = 80;
+sunLight.shadow.camera.bottom = -80;
+scene.add(sunLight);
+
+// ─── ENVIRONMENT ───
+
+// Ocean
+const oceanGeo = new THREE.PlaneGeometry(300, 120, 40, 20);
+const oceanMat = new THREE.MeshPhongMaterial({
+    color: 0x006994, transparent: true, opacity: 0.85, shininess: 90
+});
+const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+ocean.rotation.x = -Math.PI / 2;
+ocean.position.set(0, -0.3, -70);
+scene.add(ocean);
+
+// Sand
+const sandGeo = new THREE.PlaneGeometry(300, 50);
+const sandMat = new THREE.MeshLambertMaterial({ color: 0xE6C288 });
+const sand = new THREE.Mesh(sandGeo, sandMat);
+sand.rotation.x = -Math.PI / 2;
+sand.position.set(0, 0, -35);
+sand.receiveShadow = true;
+scene.add(sand);
+
+// Boardwalk
+const walkGeo = new THREE.PlaneGeometry(300, 14);
+const walkMat = new THREE.MeshLambertMaterial({ color: 0xC4A882 });
+const boardwalk = new THREE.Mesh(walkGeo, walkMat);
+boardwalk.rotation.x = -Math.PI / 2;
+boardwalk.position.set(0, 0.02, 0);
+boardwalk.receiveShadow = true;
+scene.add(boardwalk);
+
+// Boardwalk edge strips
+const stripGeo = new THREE.BoxGeometry(300, 0.08, 0.4);
+const stripMat = new THREE.MeshLambertMaterial({ color: 0x8B7355 });
+const strip1 = new THREE.Mesh(stripGeo, stripMat);
+strip1.position.set(0, 0.06, -7);
+scene.add(strip1);
+const strip2 = new THREE.Mesh(stripGeo, stripMat);
+strip2.position.set(0, 0.06, 7);
+scene.add(strip2);
+
+// Street behind boardwalk
+const streetGeo = new THREE.PlaneGeometry(300, 25);
+const streetMat = new THREE.MeshLambertMaterial({ color: 0x555555 });
+const street = new THREE.Mesh(streetGeo, streetMat);
+street.rotation.x = -Math.PI / 2;
+street.position.set(0, 0, 20);
+street.receiveShadow = true;
+scene.add(street);
+
+// ─── PALM TREES ───
+function createPalmTree(x, z, scale = 1) {
+    const group = new THREE.Group();
+    // Trunk
+    const trunkGeo = new THREE.CylinderGeometry(0.25 * scale, 0.35 * scale, 5 * scale, 7);
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8B5A2B });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 2.5 * scale;
+    trunk.castShadow = true;
+    group.add(trunk);
+    // Leaves
+    const leafGeo = new THREE.ConeGeometry(1.2 * scale, 3 * scale, 5);
+    const leafMat = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+    for (let i = 0; i < 6; i++) {
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.position.y = (4.5 + Math.random() * 0.8) * scale;
+        leaf.rotation.z = Math.PI / 4 + Math.random() * 0.3;
+        leaf.rotation.y = (i / 6) * Math.PI * 2;
+        leaf.castShadow = true;
+        group.add(leaf);
+    }
+    group.position.set(x, 0, z);
+    scene.add(group);
+}
+
+// Place palm trees
+for (let i = -120; i <= 120; i += 25) {
+    createPalmTree(i, -32, 0.9 + Math.random() * 0.3);
+    createPalmTree(i + 12, -30, 0.8 + Math.random() * 0.3);
+}
+for (let i = -100; i <= 100; i += 30) {
+    createPalmTree(i, 12, 0.7 + Math.random() * 0.3);
+}
+
+// ─── COLORFUL BUILDINGS ───
+function createBuilding(x, z, width, height, depth, color) {
+    const geo = new THREE.BoxGeometry(width, height, depth);
+    const mat = new THREE.MeshLambertMaterial({ color });
+    const building = new THREE.Mesh(geo, mat);
+    building.position.set(x, height / 2, z);
+    building.castShadow = true;
+    building.receiveShadow = true;
+    scene.add(building);
+
+    // Windows
+    const winMat = new THREE.MeshLambertMaterial({ color: 0x87CEFA });
+    const rows = Math.floor(height / 3);
+    const cols = Math.floor(width / 2.5);
+    for (let r = 1; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const win = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.5), winMat);
+            win.position.set(x - width / 2 + 1.5 + c * 2.5, r * 3, z + depth / 2 + 0.01);
+            scene.add(win);
+        }
+    }
+    return building;
+}
+
+const bldColors = [0xFF6B6B, 0x4ECDC4, 0xFFE66D, 0xFF8C42, 0xA8E6CF, 0xFF6F91, 0xC7CEEA];
+for (let i = -100; i <= 100; i += 20) {
+    const h = 6 + Math.random() * 10;
+    createBuilding(i, 35, 14, h, 10, bldColors[Math.floor(Math.random() * bldColors.length)]);
+}
+
+// ─── MUSCLE BEACH AREA ───
+function createBench(x, z, rotY = 0) {
+    const group = new THREE.Group();
+    const seatGeo = new THREE.BoxGeometry(3, 0.15, 0.6);
+    const woodMat = new THREE.MeshLambertMaterial({ color: 0x8B5A2B });
+    const seat = new THREE.Mesh(seatGeo, woodMat);
+    seat.position.y = 0.6;
+    seat.castShadow = true;
+    group.add(seat);
+
+    const legGeo = new THREE.BoxGeometry(0.1, 0.6, 0.5);
+    const metalMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const leg1 = new THREE.Mesh(legGeo, metalMat);
+    leg1.position.set(-1.3, 0.3, 0);
+    group.add(leg1);
+    const leg2 = new THREE.Mesh(legGeo, metalMat);
+    leg2.position.set(1.3, 0.3, 0);
+    group.add(leg2);
+
+    group.position.set(x, 0, z);
+    group.rotation.y = rotY;
+    scene.add(group);
+    return group;
+}
+
+function createGrindRail(x, z, length = 6, rotY = 0) {
+    const group = new THREE.Group();
+    const railGeo = new THREE.CylinderGeometry(0.08, 0.08, length, 8);
+    const railMat = new THREE.MeshPhongMaterial({ color: 0xCCCCCC, shininess: 80 });
+    const rail = new THREE.Mesh(railGeo, railMat);
+    rail.rotation.z = Math.PI / 2;
+    rail.position.y = 0.5;
+    rail.castShadow = true;
+    group.add(rail);
+
+    const postGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15);
+    const postMat = new THREE.MeshLambertMaterial({ color: 0x444444 });
+    const post1 = new THREE.Mesh(postGeo, postMat);
+    post1.position.set(-length / 2 + 0.3, 0.25, 0);
+    group.add(post1);
+    const post2 = new THREE.Mesh(postGeo, postMat);
+    post2.position.set(length / 2 - 0.3, 0.25, 0);
+    group.add(post2);
+
+    group.position.set(x, 0, z);
+    group.rotation.y = rotY;
+    scene.add(group);
+    return { mesh: group, type: 'rail', length };
+}
+
+function createRamp(x, z, width = 4) {
+    const group = new THREE.Group();
+    const rampGeo = new THREE.BoxGeometry(width, 1.2, 3);
+    const rampMat = new THREE.MeshLambertMaterial({ color: 0xFF8C42 });
+    const ramp = new THREE.Mesh(rampGeo, rampMat);
+    ramp.position.y = 0.6;
+    ramp.castShadow = true;
+    group.add(ramp);
+
+    // Transition curve
+    const curveGeo = new THREE.BoxGeometry(width, 0.6, 2);
+    const curve = new THREE.Mesh(curveGeo, rampMat);
+    curve.position.set(0, 0.3, -2.5);
+    group.add(curve);
+
+    group.position.set(x, 0, z);
+    scene.add(group);
+    return { mesh: group, type: 'ramp' };
+}
+
+// Place obstacles
+const obstacles = [];
+obstacles.push(createGrindRail(-30, -2, 8, 0));
+obstacles.push(createGrindRail(30, 2, 8, Math.PI / 2));
+obstacles.push(createGrindRail(0, -5, 6, Math.PI / 4));
+obstacles.push(createBench(-50, 3, Math.PI / 6));
+obstacles.push(createBench(50, -3, -Math.PI / 8));
+obstacles.push(createBench(-20, 4, Math.PI / 3));
+obstacles.push(createRamp(-60, 0, 5));
+obstacles.push(createRamp(60, -3, 5));
+obstacles.push(createRamp(0, 8, 4));
+
+// ─── GRAFFITI WALL ───
+const wallGeo = new THREE.BoxGeometry(20, 3, 0.5);
+const wallMat = new THREE.MeshLambertMaterial({ color: 0xFF3366 });
+const wall = new THREE.Mesh(wallGeo, wallMat);
+wall.position.set(-80, 1.5, -5);
+wall.castShadow = true;
+scene.add(wall);
+
+// ─── SKATER ───
+const skaterGroup = new THREE.Group();
+
+// Skateboard
+const deckGeo = new THREE.BoxGeometry(1.8, 0.08, 0.5);
+const deckMat = new THREE.MeshLambertMaterial({ color: 0xFF3366 });
+const deck = new THREE.Mesh(deckGeo, deckMat);
+deck.castShadow = true;
+skaterGroup.add(deck);
+
+// Wheels
+const wheelGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.12, 8);
+const wheelMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+const wheels = [];
+const wheelPos = [[-0.7, -0.08, 0.2], [-0.7, -0.08, -0.2], [0.7, -0.08, 0.2], [0.7, -0.08, -0.2]];
+wheelPos.forEach(pos => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.rotation.x = Math.PI / 2;
+    w.position.set(...pos);
+    skaterGroup.add(w);
+    wheels.push(w);
+});
+
+// Skater body (simple)
+const bodyGeo = new THREE.BoxGeometry(0.5, 0.9, 0.35);
+const bodyMat = new THREE.MeshLambertMaterial({ color: 0x3366FF });
+const body = new THREE.Mesh(bodyGeo, bodyMat);
+body.position.y = 0.65;
+body.castShadow = true;
+skaterGroup.add(body);
+
+// Head
+const headGeo = new THREE.SphereGeometry(0.22, 8, 8);
+const headMat = new THREE.MeshLambertMaterial({ color: 0xFFCCAA });
+const head = new THREE.Mesh(headGeo, headMat);
+head.position.y = 1.3;
+skaterGroup.add(head);
+
+// Arms
+const armGeo = new THREE.BoxGeometry(0.12, 0.5, 0.12);
+const armMat = new THREE.MeshLambertMaterial({ color: 0xFFCCAA });
+const leftArm = new THREE.Mesh(armGeo, armMat);
+leftArm.position.set(-0.35, 0.8, 0);
+skaterGroup.add(leftArm);
+const rightArm = new THREE.Mesh(armGeo, armMat);
+rightArm.position.set(0.35, 0.8, 0);
+skaterGroup.add(rightArm);
+
+// Legs
+const legGeo = new THREE.BoxGeometry(0.15, 0.4, 0.15);
+const leftLeg = new THREE.Mesh(legGeo, armMat);
+leftLeg.position.set(-0.15, 0.25, 0);
+skaterGroup.add(leftLeg);
+const rightLeg = new THREE.Mesh(legGeo, armMat);
+rightLeg.position.set(0.15, 0.25, 0);
+skaterGroup.add(rightLeg);
+
+// Cap
+const capGeo = new THREE.BoxGeometry(0.35, 0.1, 0.4);
+const capMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
+const cap = new THREE.Mesh(capGeo, capMat);
+cap.position.set(0, 1.45, 0.05);
+skaterGroup.add(cap);
+
+skaterGroup.position.set(0, 0.2, 0);
+scene.add(skaterGroup);
+
+// ─── GAME STATE ───
+const state = {
+    pos: new THREE.Vector3(0, 0.2, 0),
+    vel: new THREE.Vector3(0, 0, 0),
+    angle: 0,
+    speed: 0,
+    onGround: true,
+    grinding: false,
+    grindObj: null,
+    score: 0,
+    combo: 0,
+    comboTimer: 0,
+    trickName: '',
+    trickTimer: 0
+};
+
+const keys = {};
+
+// ─── INPUT ───
+document.addEventListener('keydown', e => { keys[e.code] = true; });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Mobile controls
+let mobileInput = { x: 0, y: 0, jump: false };
+const moveStick = document.getElementById('move-stick');
+let stickTouch = null;
+
+moveStick.addEventListener('touchstart', e => {
+    e.preventDefault();
+    stickTouch = e.touches[0];
+}, { passive: false });
+
+moveStick.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!stickTouch) return;
+    const rect = moveStick.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = e.touches[0].clientX - cx;
+    const dy = e.touches[0].clientY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const maxDist = 45;
+    if (dist > 0) {
+        mobileInput.x = (dx / dist) * Math.min(dist, maxDist) / maxDist;
+        mobileInput.y = -(dy / dist) * Math.min(dist, maxDist) / maxDist;
+    }
+}, { passive: false });
+
+moveStick.addEventListener('touchend', () => {
+    stickTouch = null;
+    mobileInput.x = 0;
+    mobileInput.y = 0;
+});
+
+document.getElementById('jump-btn').addEventListener('touchstart', e => {
+    e.preventDefault();
+    mobileInput.jump = true;
+});
+document.getElementById('jump-btn').addEventListener('touchend', () => {
+    mobileInput.jump = false;
+});
+
+// ─── UPDATE ───
+const ACCEL = 18;
+const FRICTION = 0.92;
+const TURN_SPEED = 3.5;
+const MAX_SPEED = 14;
+const JUMP_FORCE = 6.5;
+const GRAVITY = 18;
+
+function showTrick(name, points) {
+    state.trickName = name + ' +' + points;
+    state.trickTimer = 1.2;
+    const el = document.getElementById('trick-name');
+    el.textContent = state.trickName;
+    el.style.opacity = '1';
+    el.style.transform = 'translate(-50%, -50%) scale(1.2)';
+    setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 800);
+}
+
+function checkObstacles() {
+    const px = state.pos.x, pz = state.pos.z;
+    // Rails
+    for (const obs of obstacles) {
+        if (obs.type === 'rail') {
+            const dx = obs.mesh.position.x - px;
+            const dz = obs.mesh.position.z - pz;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < 1.5 && Math.abs(state.vel.y) < 1 && state.pos.y < 1 && !state.grinding) {
+                state.grinding = true;
+                state.grindObj = obs;
+                state.vel.y = 0;
+                state.pos.y = 0.58;
+                state.combo++;
+                state.comboTimer = 2;
+                showTrick('Grind!', 100 * state.combo);
+                state.score += 100 * state.combo;
+                break;
+            }
+        }
+    }
+}
+
+function update(dt) {
+    // Input
+    let forward = 0, turn = 0;
+    if (keys['KeyW'] || keys['ArrowUp']) forward = 1;
+    if (keys['KeyS'] || keys['ArrowDown']) forward = -0.6;
+    if (keys['KeyA'] || keys['ArrowLeft']) turn = 1;
+    if (keys['KeyD'] || keys['ArrowRight']) turn = -1;
+
+    // Mobile override
+    if (mobileInput.x !== 0 || mobileInput.y !== 0) {
+        forward = mobileInput.y;
+        turn = -mobileInput.x;
+    }
+
+    // Combo timer
+    if (state.comboTimer > 0) {
+        state.comboTimer -= dt;
+        if (state.comboTimer <= 0) state.combo = 0;
+    }
+
+    // Trick name timer
+    if (state.trickTimer > 0) {
+        state.trickTimer -= dt;
+    }
+
+    // Jump
+    if ((keys['Space'] || mobileInput.jump) && state.onGround && !state.grinding) {
+        state.vel.y = JUMP_FORCE;
+        state.onGround = false;
+    }
+
+    // Physics
+    if (state.grinding) {
+        // On rail - slide along rail direction
+        const railDir = state.grindObj.mesh.rotation.y;
+        const railForward = new THREE.Vector3(Math.sin(railDir), 0, Math.cos(railDir));
+        const speedAlong = state.vel.dot(railForward);
+        state.vel.copy(railForward.multiplyScalar(speedAlong * 0.98));
+        state.pos.y = 0.58;
+
+        // End grind if speed too low or manual jump
+        if (keys['Space'] || mobileInput.jump) {
+            state.grinding = false;
+            state.vel.y = JUMP_FORCE * 0.7;
+            state.combo++;
+            state.comboTimer = 2;
+            showTrick('Grind Exit!', 150 * state.combo);
+            state.score += 150 * state.combo;
+        }
+        if (state.vel.length() < 1) {
+            state.grinding = false;
+        }
+    } else {
+        // Normal movement
+        state.angle += turn * TURN_SPEED * dt;
+        const dir = new THREE.Vector3(Math.sin(state.angle), 0, Math.cos(state.angle));
+        state.vel.x += dir.x * forward * ACCEL * dt;
+        state.vel.z += dir.z * forward * ACCEL * dt;
+        state.vel.y -= GRAVITY * dt;
+    }
+
+    state.vel.x *= FRICTION;
+    state.vel.z *= FRICTION;
+
+    // Clamp speed
+    const horizSpeed = Math.sqrt(state.vel.x * state.vel.x + state.vel.z * state.vel.z);
+    if (horizSpeed > MAX_SPEED) {
+        const scale = MAX_SPEED / horizSpeed;
+        state.vel.x *= scale;
+        state.vel.z *= scale;
+    }
+
+    // Position
+    state.pos.add(new THREE.Vector3(state.vel.x * dt, state.vel.y * dt, state.vel.z * dt));
+
+    // Ground collision
+    if (state.pos.y <= 0.2) {
+        if (!state.onGround && state.vel.y < -2) {
+            // Landing from jump
+            if (horizSpeed > 4) {
+                state.combo++;
+                state.comboTimer = 2;
+                showTrick('Smooth Landing!', 50 * state.combo);
+                state.score += 50 * state.combo;
+            }
+        }
+        state.pos.y = 0.2;
+        state.vel.y = 0;
+        state.onGround = true;
+        state.grinding = false;
+    } else {
+        state.onGround = false;
+        checkObstacles();
+    }
+
+    // Boundaries
+    state.pos.x = Math.max(-130, Math.min(130, state.pos.x));
+    state.pos.z = Math.max(-15, Math.min(15, state.pos.z));
+
+    // Update skater mesh
+    skaterGroup.position.copy(state.pos);
+    skaterGroup.rotation.y = state.angle + Math.PI;
+
+    // Tilt when turning
+    skaterGroup.rotation.z = turn * 0.15;
+    skaterGroup.rotation.x = forward * 0.05;
+
+    // Animate wheels
+    wheels.forEach(w => {
+        w.rotation.y += horizSpeed * dt * 3;
+    });
+
+    // Camera follow
+    const camOffset = new THREE.Vector3(
+        Math.sin(state.angle) * 6,
+        4,
+        Math.cos(state.angle) * 6
+    );
+    camera.position.lerp(state.pos.clone().add(camOffset), 0.08);
+    camera.lookAt(state.pos.clone().add(new THREE.Vector3(0, 1, 0)));
+
+    // Animate ocean
+    const positions = oceanGeo.attributes.position;
+    for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const y = positions.getY(i);
+        const wave = Math.sin(x * 0.1 + Date.now() * 0.0015) * 0.3 +
+                      Math.sin(y * 0.08 + Date.now() * 0.001) * 0.2;
+        positions.setZ(i, wave);
+    }
+    positions.needsUpdate = true;
+
+    // UI
+    document.getElementById('score').textContent = 'Score: ' + Math.floor(state.score);
+    const comboEl = document.getElementById('combo');
+    if (state.combo > 1) {
+        comboEl.textContent = state.combo + 'x Combo!';
+        comboEl.style.opacity = '1';
+    } else {
+        comboEl.textContent = '';
+    }
+}
+
+// ─── RENDER LOOP ───
+let lastTime = performance.now();
+function animate() {
+    requestAnimationFrame(animate);
+    const now = performance.now();
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+    update(dt);
+    renderer.render(scene, camera);
+}
+animate();
+
+// ─── RESIZE ───
+window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
