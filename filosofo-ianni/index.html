@@ -230,6 +230,61 @@
             #questionPanel { padding: 1rem; width: 95%; max-height: 90%; overflow-y: auto; }
         }
 
+        .day-btn, .time-btn {
+            display: inline-block;
+            width: auto;
+            min-width: 72px;
+            padding: 8px 12px;
+            margin: 4px;
+            background: rgba(201,168,76,0.1);
+            border: 1px solid rgba(201,168,76,0.3);
+            border-radius: 6px;
+            color: #FDF6E3;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .day-btn:hover, .time-btn:hover {
+            background: rgba(201,168,76,0.25);
+            border-color: #C9A84C;
+        }
+
+        .day-btn.selected, .time-btn.selected {
+            background: rgba(139,38,53,0.3);
+            border-color: #C9A84C;
+        }
+
+        .confirm-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            background: linear-gradient(135deg, #8B2635, #a03040);
+            border: none;
+            border-radius: 6px;
+            color: #FDF6E3;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+
+        .mailto-link {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 10px 24px;
+            background: rgba(201,168,76,0.15);
+            border: 1px solid #C9A84C;
+            border-radius: 6px;
+            color: #C9A84C;
+            font-family: 'Playfair Display', serif;
+            font-size: 1rem;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
         #mobileControls {
             display: none;
             width: 100%;
@@ -308,11 +363,6 @@
             </div>
             <button class="btn" onclick="startGame()">Inizia il Viaggio</button>
         </div>
-        <div id="questionPanel" class="hidden">
-            <h3>🧘 Il Filosofo Ianni ti scrive:</h3>
-            <p class="question-text" id="qText"></p>
-            <div id="qAnswers"></div>
-        </div>
     </div>
     <div id="mobileControls">
         <div class="ctrl-row">
@@ -324,6 +374,11 @@
                 <div class="ctrl-btn ctrl-jump" id="btnJump">SALTO</div>
             </div>
         </div>
+    </div>
+    <div id="questionPanel" class="hidden">
+        <h3 id="qTitle">🧘 Il Filosofo Ianni ti scrive:</h3>
+        <p class="question-text" id="qText"></p>
+        <div id="qAnswers"></div>
     </div>
 
 <script>
@@ -418,15 +473,17 @@ let obstacleTimer = 0;
 // Shrine position
 const SHRINE_X = 3050;
 
-// Invitation (shown at shrine)
-const invitation = {
-    q: "Oh, saggio Bruno... sono a Roma la settimana prossima, dal lunedì al venerdì. Scegli la tua avventura:",
-    answers: [
-        "🍺 Birra artigianale",
-        "☕ Caffè ristretto",
-        "🍽️ Cena completa"
-    ]
+// Invitation flow state
+let inviteState = {
+    step: 0,
+    drink: '',
+    day: '',
+    time: ''
 };
+
+const days = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì'];
+const times = ['18:00', '19:30', '21:00', 'A sorpresa'];
+const drinks = ['🍺 Birra artigianale', '☕ Caffè ristretto', '🍽️ Cena completa'];
 
 // Input
 const keys = {};
@@ -644,30 +701,94 @@ function update() {
 }
 
 function showQuestion() {
-    const inv = invitation;
-    qText.textContent = `"${inv.q}"`;
-    qAnswers.innerHTML = '';
-    inv.answers.forEach((ans) => {
-        const btn = document.createElement('button');
-        btn.className = 'answer-btn';
-        btn.textContent = ans;
-        btn.onclick = () => answerQuestion(ans);
-        qAnswers.appendChild(btn);
-    });
+    inviteState.step = 0;
+    inviteState.drink = '';
+    inviteState.day = '';
+    inviteState.time = '';
+    showStep();
     questionPanel.classList.remove('hidden');
 }
 
-function answerQuestion(choice) {
+function showStep() {
+    const qTitle = document.getElementById('qTitle');
+    qAnswers.innerHTML = '';
+
+    if (inviteState.step === 0) {
+        qTitle.textContent = '🧘 Il Filosofo Ianni ti scrive:';
+        qText.textContent = '"Oh, saggio Bruno... sono a Roma la settimana prossima, dal lunedì al venerdì. Scegli la tua avventura:"';
+        drinks.forEach(d => {
+            const btn = document.createElement('button');
+            btn.className = 'answer-btn';
+            btn.textContent = d;
+            btn.onclick = () => { inviteState.drink = d; inviteState.step = 1; showStep(); };
+            qAnswers.appendChild(btn);
+        });
+    } else if (inviteState.step === 1) {
+        qTitle.textContent = '📅 Scegli il giorno:';
+        qText.textContent = '"Quale giorno ti va di incontrarci?"';
+        days.forEach(d => {
+            const btn = document.createElement('button');
+            btn.className = 'day-btn';
+            btn.textContent = d;
+            btn.onclick = () => { inviteState.day = d; inviteState.step = 2; showStep(); };
+            qAnswers.appendChild(btn);
+        });
+    } else if (inviteState.step === 2) {
+        qTitle.textContent = '🕐 Scegli l\'ora:';
+        qText.textContent = '"A che ora ti piace incontrarci?"';
+        times.forEach(t => {
+            const btn = document.createElement('button');
+            btn.className = 'time-btn';
+            btn.textContent = t;
+            btn.onclick = () => { inviteState.time = t; inviteState.step = 3; showStep(); };
+            qAnswers.appendChild(btn);
+        });
+    } else if (inviteState.step === 3) {
+        qTitle.textContent = '✨ Tutto confermato!';
+        qText.textContent = `"Hai scelto: ${inviteState.drink} — ${inviteState.day} alle ${inviteState.time}."`;
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'confirm-btn';
+        confirmBtn.textContent = 'Conferma e invia mail 📧';
+        confirmBtn.onclick = () => showFinal();
+        qAnswers.appendChild(confirmBtn);
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'answer-btn';
+        backBtn.textContent = '← Torna indietro';
+        backBtn.style.marginTop = '8px';
+        backBtn.onclick = () => { inviteState.step = 0; showStep(); };
+        qAnswers.appendChild(backBtn);
+    }
+}
+
+function showFinal() {
     questionPanel.classList.add('hidden');
     const mobileControls = document.getElementById('mobileControls');
     if (mobileControls) mobileControls.style.display = 'none';
+
+    const subject = encodeURIComponent('Incontro a Roma con Matteo');
+    const body = encodeURIComponent(
+        `Ciao Bruno e Matteo,\n\n` +
+        `Avete confermato un incontro a Roma!\n\n` +
+        `Dettagli:\n` +
+        `- Tipo: ${inviteState.drink}\n` +
+        `- Giorno: ${inviteState.day}\n` +
+        `- Ora: ${inviteState.time}\n\n` +
+        `Buon divertimento! 🍺☕🍽️\n\n` +
+        `— Filosofo Ianni (via La Grotta della Saggezza)`
+    );
+    const mailto = `mailto:iannimatte@gmail.com,brunobarbera11@gmail.com?subject=${subject}&body=${body}`;
+
     overlay.innerHTML = `
         <h1>🧘 Il Filosofo ha parlato!</h1>
         <p class="subtitle">La saggezza trionfa ancora una volta nella grotta della Ciociaria</p>
         <p>Hai raccolto <strong>${player.wisdom}</strong> punti saggezza e <strong>${player.pearls}</strong> perle!</p>
-        <p>Hai scelto: <strong style="color: #C9A84C;">${choice}</strong></p>
+        <p>Hai scelto:<br><strong style="color: #C9A84C;">${inviteState.drink}</strong><br>${inviteState.day} alle ${inviteState.time}</p>
         <p>Matteo ti aspetta a Roma. Ci vediamo presto!</p>
-        <button class="btn" onclick="startGame()">Gioca Ancora</button>
+        <a href="${mailto}" class="mailto-link">📧 Invia mail di conferma</a>
+        <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem;">Clicca per aprire la tua app mail con il promemoria pre-compilato</p>
+        <button class="btn" onclick="startGame()" style="margin-top: 1rem;">Gioca Ancora</button>
     `;
     overlay.classList.remove('hidden');
 }
