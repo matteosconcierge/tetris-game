@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Filosofo Ianni — La Grotta della Saggezza</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Cormorant+Garamond:wght@400;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1612;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Cormorant Garamond', serif;
+            overflow: hidden;
+            color: #FDF6E3;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 40px rgba(201,168,76,0.15);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: #2a2018;
+            border-radius: 8px;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-family: 'Playfair Display', serif;
+            font-size: 14px;
+            color: #C9A84C;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        #ui .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #ui .stat span {
+            font-size: 18px;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(26,22,18,0.92);
+            z-index: 20;
+            pointer-events: auto;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        #overlay h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            color: #C9A84C;
+            margin-bottom: 0.5rem;
+            letter-spacing: 2px;
+        }
+
+        #overlay .subtitle {
+            font-size: 1.1rem;
+            color: #8a7e6b;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        #overlay p {
+            font-size: 1rem;
+            color: #FDF6E3;
+            margin-bottom: 0.5rem;
+            opacity: 0.85;
+        }
+
+        #overlay .controls {
+            margin: 1.5rem 0;
+            padding: 1rem 1.5rem;
+            background: rgba(201,168,76,0.08);
+            border: 1px solid rgba(201,168,76,0.2);
+            border-radius: 8px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.85rem;
+            color: #C9A84C;
+        }
+
+        .btn {
+            margin-top: 1.5rem;
+            padding: 12px 32px;
+            background: linear-gradient(135deg, #8B2635, #a03040);
+            color: #FDF6E3;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(139,38,53,0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(139,38,53,0.4);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #questionPanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #2a2018, #1a1612);
+            border: 2px solid #C9A84C;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            z-index: 30;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        #questionPanel h3 {
+            font-family: 'Playfair Display', serif;
+            color: #C9A84C;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        #questionPanel .question-text {
+            font-style: italic;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #FDF6E3;
+        }
+
+        .answer-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            background: rgba(201,168,76,0.1);
+            border: 1px solid rgba(201,168,76,0.3);
+            border-radius: 6px;
+            color: #FDF6E3;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .answer-btn:hover {
+            background: rgba(201,168,76,0.2);
+            border-color: #C9A84C;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 0; }
+            #gameContainer { border-radius: 0; }
+            canvas { border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="game" width="800" height="450"></canvas>
+        <div id="ui">
+            <div class="stat"><span>🍦</span> Saggezza: <span id="score">0</span></div>
+            <div class="stat"><span>📿</span> Perle: <span id="pearls">0</span>/7</div>
+        </div>
+        <div id="overlay">
+            <h1>La Grotta della Saggezza</h1>
+            <p class="subtitle">Guida il Filosofo Ianni nella sua grotta tibetana della Ciociaria</p>
+            <p>Raccogli gelato, polenta e cornetti per accumulare saggezza.</p>
+            <p>Evita i documenti legali che cadono dall'Avvocato Ianni di sopra!</p>
+            <div class="controls">
+                ← → per muoverti · SPAZIO per saltare<br>
+                Raggiungi il tappetino di meditazione alla fine della grotta
+            </div>
+            <button class="btn" onclick="startGame()">Inizia il Viaggio</button>
+        </div>
+        <div id="questionPanel" class="hidden">
+            <h3>Il Fanciullo Smarrito chiede:</h3>
+            <p class="question-text" id="qText"></p>
+            <div id="qAnswers"></div>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const questionPanel = document.getElementById('questionPanel');
+const qText = document.getElementById('qText');
+const qAnswers = document.getElementById('qAnswers');
+const scoreEl = document.getElementById('score');
+const pearlsEl = document.getElementById('pearls');
+
+let gameRunning = false;
+let gameWon = false;
+let camera = { x: 0 };
+let particles = [];
+let floatingTexts = [];
+
+// Game constants
+const GRAVITY = 0.6;
+const JUMP_FORCE = -12;
+const SPEED = 4;
+const WORLD_WIDTH = 3200;
+
+// Player
+const player = {
+    x: 100, y: 300, w: 32, h: 48,
+    vx: 0, vy: 0,
+    onGround: false,
+    facing: 1,
+    frame: 0,
+    frameTimer: 0,
+    wisdom: 0,
+    pearls: 0,
+    invincible: 0
+};
+
+// Platforms [x, y, w, h, type]
+const platforms = [
+    // Ground
+    [0, 400, 400, 50, 'ground'],
+    [500, 400, 300, 50, 'ground'],
+    [900, 380, 250, 70, 'ground'],
+    [1250, 400, 400, 50, 'ground'],
+    [1800, 380, 300, 70, 'ground'],
+    [2200, 360, 250, 90, 'ground'],
+    [2550, 400, 650, 50, 'ground'],
+    // Floating platforms
+    [200, 320, 80, 15, 'wood'],
+    [350, 260, 80, 15, 'wood'],
+    [550, 280, 100, 15, 'wood'],
+    [750, 220, 80, 15, 'wood'],
+    [1000, 280, 100, 15, 'wood'],
+    [1200, 240, 80, 15, 'wood'],
+    [1450, 300, 120, 15, 'wood'],
+    [1600, 240, 80, 15, 'wood'],
+    [1900, 280, 100, 15, 'wood'],
+    [2100, 220, 80, 15, 'wood'],
+    [2300, 260, 100, 15, 'wood'],
+    [2700, 300, 120, 15, 'wood'],
+    [2950, 240, 80, 15, 'wood'],
+];
+
+// Collectibles [x, y, type] - type: 'gelato', 'polenta', 'cornetto', 'pearl'
+const collectibles = [
+    [220, 290, 'gelato'],
+    [380, 230, 'polenta'],
+    [580, 250, 'cornetto'],
+    [770, 190, 'gelato'],
+    [1020, 250, 'polenta'],
+    [1230, 210, 'cornetto'],
+    [1480, 270, 'gelato'],
+    [1630, 210, 'pearl'],
+    [1930, 250, 'cornetto'],
+    [2130, 190, 'gelato'],
+    [2330, 230, 'polenta'],
+    [2730, 270, 'pearl'],
+    [2980, 210, 'cornetto'],
+    [280, 370, 'pearl'],
+    [650, 370, 'gelato'],
+    [1100, 350, 'polenta'],
+    [1400, 370, 'cornetto'],
+    [2000, 350, 'pearl'],
+    [2400, 330, 'gelato'],
+    [3100, 370, 'pearl'],
+];
+
+// Obstacles (falling papers) - spawned dynamically
+let obstacles = [];
+let obstacleTimer = 0;
+
+// Shrine position
+const SHRINE_X = 3050;
+
+// Questions
+const questions = [
+    {
+        q: "Perché Achille non potrà mai raggiungere la tartaruga?",
+        answers: [
+            "Perché gli è venuto un crampo al tallone ed è morto!",
+            "Perché Zeno di Elea era un gran rompiscatole",
+            "Perché la tartaruga ha preso il Frecciarossa"
+        ],
+        correct: 0
+    },
+    {
+        q: "Qual è l'essenza del relativismo sofistico?",
+        answers: [
+            "Che ogni verità è relativa al gusto personale",
+            "Che a me piace il gelato al pistacchio, e pure a te",
+            "Che Protagora aveva ragione su tutto"
+        ],
+        correct: 1
+    },
+    {
+        q: "Cosa risponde il saggio quando gli chiedono il senso della vita?",
+        answers: [
+            "Il senso della vita è un concetto troppo astratto",
+            "Ti piace la polenta? Ah, pure a me! Allora ci vediamo!",
+            "42, ma senza virgola"
+        ],
+        correct: 1
+    }
+];
+
+// Input
+const keys = {};
+document.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Space') e.preventDefault();
+});
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+// Touch controls for mobile
+let touchLeft = false, touchRight = false, touchJump = false;
+canvas.addEventListener('touchstart', e => {
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches[0];
+    const x = t.clientX - rect.left;
+    const y = t.clientY - rect.top;
+    if (y > rect.height * 0.6) {
+        if (x < rect.width / 3) touchLeft = true;
+        else if (x > rect.width * 2/3) touchRight = true;
+        else touchJump = true;
+    } else {
+        touchJump = true;
+    }
+});
+canvas.addEventListener('touchend', () => {
+    touchLeft = touchRight = touchJump = false;
+});
+
+function startGame() {
+    overlay.classList.add('hidden');
+    questionPanel.classList.add('hidden');
+    gameRunning = true;
+    gameWon = false;
+    player.x = 100; player.y = 300;
+    player.vx = 0; player.vy = 0;
+    player.wisdom = 0; player.pearls = 0;
+    player.invincible = 0;
+    particles = []; floatingTexts = []; obstacles = [];
+    // Reset collectibles
+    collectibles.forEach(c => c.collected = false);
+    camera.x = 0;
+    requestAnimationFrame(gameLoop);
+}
+
+function spawnObstacle() {
+    const type = Math.random() < 0.5 ? 'paper' : 'gavel';
+    obstacles.push({
+        x: camera.x + Math.random() * canvas.width,
+        y: -30,
+        w: 24, h: 24,
+        vy: 2 + Math.random() * 2,
+        type: type
+    });
+}
+
+function createParticles(x, y, color) {
+    for (let i = 0; i < 8; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 4,
+            vy: (Math.random() - 0.5) * 4 - 2,
+            life: 30,
+            color
+        });
+    }
+}
+
+function addFloatingText(x, y, text, color) {
+    floatingTexts.push({ x, y, text, color, life: 60, vy: -1 });
+}
+
+function update() {
+    if (!gameRunning || gameWon) return;
+
+    // Player movement
+    if (keys['ArrowLeft'] || keys['KeyA'] || touchLeft) {
+        player.vx = -SPEED;
+        player.facing = -1;
+    } else if (keys['ArrowRight'] || keys['KeyD'] || touchRight) {
+        player.vx = SPEED;
+        player.facing = 1;
+    } else {
+        player.vx *= 0.8;
+    }
+
+    if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || touchJump) && player.onGround) {
+        player.vy = JUMP_FORCE;
+        player.onGround = false;
+    }
+
+    // Physics
+    player.vy += GRAVITY;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // World bounds
+    if (player.x < 0) player.x = 0;
+    if (player.x > WORLD_WIDTH - player.w) player.x = WORLD_WIDTH - player.w;
+
+    // Platform collisions
+    player.onGround = false;
+    for (const plat of platforms) {
+        const [px, py, pw, ph] = plat;
+        if (player.x + player.w > px && player.x < px + pw &&
+            player.y + player.h > py && player.y + player.h < py + ph + 10 &&
+            player.vy >= 0) {
+            player.y = py - player.h;
+            player.vy = 0;
+            player.onGround = true;
+        }
+    }
+
+    // Floor fall-through
+    if (player.y > canvas.height + 50) {
+        player.x = 100; player.y = 300;
+        player.vx = 0; player.vy = 0;
+        addFloatingText(player.x, player.y - 20, "Oof!", '#C9A84C');
+    }
+
+    // Camera follow
+    const targetCam = player.x - canvas.width / 3;
+    camera.x += (targetCam - camera.x) * 0.1;
+    if (camera.x < 0) camera.x = 0;
+    if (camera.x > WORLD_WIDTH - canvas.width) camera.x = WORLD_WIDTH - canvas.width;
+
+    // Collectibles
+    for (const item of collectibles) {
+        if (item.collected) continue;
+        const [ix, iy, type] = item;
+        if (Math.abs(player.x + player.w/2 - ix) < 20 && Math.abs(player.y + player.h/2 - iy) < 30) {
+            item.collected = true;
+            let points = 0, color = '#C9A84C', text = '';
+            switch(type) {
+                case 'gelato': points = 10; color = '#ff69b4'; text = '+10 Saggezza!'; break;
+                case 'polenta': points = 20; color = '#daa520'; text = '+20 Saggezza!'; break;
+                case 'cornetto': points = 30; color = '#cd853f'; text = '+30 Saggezza!'; break;
+                case 'pearl': points = 50; color = '#e0e0e0'; text = 'Perla!'; player.pearls++; break;
+            }
+            player.wisdom += points;
+            createParticles(ix, iy, color);
+            addFloatingText(ix, iy - 10, text, color);
+        }
+    }
+
+    // Obstacles
+    obstacleTimer++;
+    if (obstacleTimer > 60 + Math.random() * 60) {
+        spawnObstacle();
+        obstacleTimer = 0;
+    }
+
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.y += obs.vy;
+        if (obs.y > canvas.height + 50) {
+            obstacles.splice(i, 1);
+            continue;
+        }
+
+        // Check collision with player
+        if (player.invincible <= 0 &&
+            player.x < obs.x + obs.w && player.x + player.w > obs.x &&
+            player.y < obs.y + obs.h && player.y + player.h > obs.y) {
+            player.wisdom = Math.max(0, player.wisdom - 20);
+            player.invincible = 60;
+            addFloatingText(player.x, player.y - 20, "-20 Saggezza!", '#8B2635');
+            createParticles(player.x + player.w/2, player.y + player.h/2, '#8B2635');
+        }
+    }
+
+    if (player.invincible > 0) player.invincible--;
+
+    // Win condition - reach shrine
+    if (player.x > SHRINE_X && !gameWon) {
+        gameWon = true;
+        showQuestion();
+    }
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1;
+        p.life--;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Update floating texts
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const t = floatingTexts[i];
+        t.y += t.vy;
+        t.life--;
+        if (t.life <= 0) floatingTexts.splice(i, 1);
+    }
+
+    // Update UI
+    scoreEl.textContent = player.wisdom;
+    pearlsEl.textContent = player.pearls;
+}
+
+function showQuestion() {
+    const q = questions[Math.floor(Math.random() * questions.length)];
+    qText.textContent = `"${q.q}"`;
+    qAnswers.innerHTML = '';
+    q.answers.forEach((ans, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.textContent = ans;
+        btn.onclick = () => answerQuestion(i === q.correct);
+        qAnswers.appendChild(btn);
+    });
+    questionPanel.classList.remove('hidden');
+}
+
+function answerQuestion(correct) {
+    questionPanel.classList.add('hidden');
+    if (correct) {
+        overlay.innerHTML = `
+            <h1>🧘 Il Filosofo ha parlato!</h1>
+            <p class="subtitle">La saggezza trionfa ancora una volta nella grotta della Ciociaria</p>
+            <p>Hai raccolto <strong>${player.wisdom}</strong> punti saggezza e <strong>${player.pearls}</strong> perle!</p>
+            <p>Il Fanciullo Smarrito è tornato a casa illuminato... e con voglia di gelato.</p>
+            <button class="btn" onclick="startGame()">Gioca Ancora</button>
+        `;
+    } else {
+        overlay.innerHTML = `
+            <h1>😕 Hmm, non proprio...</h1>
+            <p class="subtitle">Il Filosofo Ianni ti guarda confuso mentre morde un cornetto</p>
+            <p>La risposta corretta avrebbe riguardato il gelato al pistacchio, ovviamente.</p>
+            <button class="btn" onclick="startGame()">Riprova</button>
+        `;
+    }
+    overlay.classList.remove('hidden');
+}
+
+function draw() {
+    // Sky gradient (cave interior dark)
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#1a1612');
+    gradient.addColorStop(1, '#2a2018');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(-Math.floor(camera.x), 0);
+
+    // Background layers
+    // Distant mountains (visible through cave entrance)
+    ctx.fillStyle = '#3a3028';
+    for (let i = 0; i < 4; i++) {
+        const mx = i * 900;
+        ctx.beginPath();
+        ctx.moveTo(mx, 250);
+        ctx.lineTo(mx + 200, 100);
+        ctx.lineTo(mx + 450, 280);
+        ctx.lineTo(mx + 200, 350);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Cave walls
+    ctx.fillStyle = '#2a2018';
+    // Left wall
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(80, 0);
+    ctx.lineTo(60, 200);
+    ctx.lineTo(100, 350);
+    ctx.lineTo(50, 450);
+    ctx.lineTo(0, 450);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right wall (end of cave)
+    ctx.beginPath();
+    ctx.moveTo(WORLD_WIDTH, 0);
+    ctx.lineTo(WORLD_WIDTH - 100, 0);
+    ctx.lineTo(WORLD_WIDTH - 80, 150);
+    ctx.lineTo(WORLD_WIDTH - 120, 300);
+    ctx.lineTo(WORLD_WIDTH - 60, 450);
+    ctx.lineTo(WORLD_WIDTH, 450);
+    ctx.closePath();
+    ctx.fill();
+
+    // Prayer flags
+    const flagColors = ['#8B2635', '#C9A84C', '#6B8E6B', '#4a7a9a'];
+    for (let i = 0; i < 8; i++) {
+        const fx = 150 + i * 380;
+        const fy = 50 + Math.sin(i) * 20;
+        ctx.strokeStyle = '#5a4a3a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(fx, 0);
+        ctx.lineTo(fx, fy + 60);
+        ctx.stroke();
+        for (let j = 0; j < 4; j++) {
+            ctx.fillStyle = flagColors[j % flagColors.length];
+            ctx.fillRect(fx + 2, fy + j * 14, 18, 12);
+        }
+    }
+
+    // Garlic braids and dried tomatoes
+    for (let i = 0; i < 6; i++) {
+        const gx = 300 + i * 500;
+        // Garlic
+        ctx.fillStyle = '#e8dcc8';
+        for (let j = 0; j < 5; j++) {
+            ctx.beginPath();
+            ctx.ellipse(gx + j * 8, 80 + j * 5, 6, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // Tomatoes
+        ctx.fillStyle = '#c0392b';
+        for (let j = 0; j < 4; j++) {
+            ctx.beginPath();
+            ctx.arc(gx + 50 + j * 10, 75 + j * 4, 7, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // Platforms
+    for (const plat of platforms) {
+        const [px, py, pw, ph, type] = plat;
+        if (type === 'ground') {
+            ctx.fillStyle = '#4a3a2a';
+            ctx.fillRect(px, py, pw, ph);
+            ctx.fillStyle = '#5a4a3a';
+            ctx.fillRect(px, py, pw, 8);
+        } else {
+            // Wood platforms
+            ctx.fillStyle = '#6b5335';
+            ctx.fillRect(px, py, pw, ph);
+            ctx.fillStyle = '#7a6345';
+            ctx.fillRect(px, py, pw, 4);
+        }
+    }
+
+    // Shrine at the end
+    const sx = SHRINE_X;
+    ctx.fillStyle = '#8B2635';
+    ctx.fillRect(sx, 310, 60, 90);
+    ctx.fillStyle = '#C9A84C';
+    ctx.beginPath();
+    ctx.moveTo(sx - 10, 310);
+    ctx.lineTo(sx + 30, 270);
+    ctx.lineTo(sx + 70, 310);
+    ctx.closePath();
+    ctx.fill();
+    // Meditation mat
+    ctx.fillStyle = '#6B8E6B';
+    ctx.fillRect(sx + 10, 380, 40, 20);
+
+    // Collectibles
+    for (const item of collectibles) {
+        if (item.collected) continue;
+        const [ix, iy, type] = item;
+        const floatY = iy + Math.sin(Date.now() / 300 + ix) * 5;
+
+        ctx.save();
+        ctx.translate(ix, floatY);
+
+        // Glow
+        ctx.shadowColor = 'rgba(201,168,76,0.4)';
+        ctx.shadowBlur = 10;
+
+        if (type === 'gelato') {
+            // Gelato cone
+            ctx.fillStyle = '#cd853f';
+            ctx.beginPath();
+            ctx.moveTo(-8, 8);
+            ctx.lineTo(0, 18);
+            ctx.lineTo(8, 8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#ff69b4';
+            ctx.beginPath();
+            ctx.arc(0, 2, 8, Math.PI, 0);
+            ctx.fill();
+        } else if (type === 'polenta') {
+            // Polenta block
+            ctx.fillStyle = '#daa520';
+            ctx.fillRect(-8, -4, 16, 16);
+            ctx.fillStyle = '#b8860b';
+            ctx.fillRect(-8, -4, 16, 4);
+        } else if (type === 'cornetto') {
+            // Cornetto
+            ctx.fillStyle = '#cd853f';
+            ctx.beginPath();
+            ctx.moveTo(-6, 10);
+            ctx.quadraticCurveTo(0, -10, 6, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'pearl') {
+            // Prayer bead/pearl
+            ctx.fillStyle = '#e8e0d0';
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.arc(-2, -2, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    // Obstacles
+    for (const obs of obstacles) {
+        ctx.save();
+        ctx.translate(obs.x, obs.y);
+        ctx.rotate(Date.now() / 200);
+        if (obs.type === 'paper') {
+            ctx.fillStyle = '#f5f5dc';
+            ctx.fillRect(-10, -12, 20, 24);
+            ctx.fillStyle = '#8B2635';
+            ctx.fillRect(-8, -8, 16, 2);
+            ctx.fillRect(-8, -4, 12, 2);
+            ctx.fillRect(-8, 0, 14, 2);
+        } else {
+            // Gavel
+            ctx.fillStyle = '#5a3a1a';
+            ctx.fillRect(-3, -12, 6, 24);
+            ctx.fillStyle = '#8B2635';
+            ctx.fillRect(-12, -16, 24, 8);
+        }
+        ctx.restore();
+    }
+
+    // Player
+    ctx.save();
+    ctx.translate(player.x + player.w/2, player.y + player.h/2);
+    if (player.facing < 0) ctx.scale(-1, 1);
+
+    // Blink effect when invincible
+    if (player.invincible > 0 && Math.floor(player.invincible / 4) % 2 === 0) {
+        ctx.globalAlpha = 0.5;
+    }
+
+    // Robes
+    ctx.fillStyle = '#d4a843';
+    ctx.beginPath();
+    ctx.moveTo(0, -24);
+    ctx.lineTo(-14, 24);
+    ctx.lineTo(14, 24);
+    ctx.closePath();
+    ctx.fill();
+
+    // Sash
+    ctx.fillStyle = '#b8860b';
+    ctx.fillRect(-14, 4, 28, 4);
+
+    // Head
+    ctx.fillStyle = '#e8c4a0';
+    ctx.beginPath();
+    ctx.arc(0, -20, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Beard
+    ctx.fillStyle = '#e8e0d0';
+    ctx.beginPath();
+    ctx.moveTo(-8, -16);
+    ctx.lineTo(0, -8);
+    ctx.lineTo(8, -16);
+    ctx.lineTo(6, -22);
+    ctx.lineTo(-6, -22);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#2c2c2c';
+    ctx.beginPath();
+    ctx.arc(-3, -22, 1.5, 0, Math.PI * 2);
+    ctx.arc(3, -22, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cornetto in hand
+    ctx.fillStyle = '#cd853f';
+    ctx.beginPath();
+    ctx.moveTo(14, 4);
+    ctx.lineTo(22, -6);
+    ctx.lineTo(18, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    // Particles
+    for (const p of particles) {
+        ctx.globalAlpha = p.life / 30;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+
+    // Floating texts
+    for (const t of floatingTexts) {
+        ctx.globalAlpha = t.life / 60;
+        ctx.fillStyle = t.color;
+        ctx.font = 'bold 14px "Playfair Display", serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(t.text, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+
+    // Vignette overlay
+    const vignette = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 200, canvas.width/2, canvas.height/2, 450);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.3)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function gameLoop() {
+    update();
+    draw();
+    if (gameRunning) {
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+// Initial draw
+draw();
+</script>
+</body>
+</html>
