@@ -266,16 +266,30 @@
             body { padding: 0; }
             #gameContainer { border-radius: 0; max-width: 100%; height: 52vh; min-height: 340px; aspect-ratio: auto; }
             canvas { border-radius: 0; }
-            #overlay { padding: 1rem; justify-content: flex-start; padding-top: 1.2rem; padding-bottom: 2.5rem; overflow-y: auto; }
-            #overlay h1 { font-size: 1.3rem; margin-bottom: 0.2rem; }
-            #overlay .subtitle { font-size: 0.85rem; margin-bottom: 0.5rem; }
-            #overlay p { font-size: 0.82rem; margin-bottom: 0.25rem; line-height: 1.4; }
-            #overlay .controls { margin: 0.6rem 0; padding: 0.5rem 0.8rem; font-size: 0.72rem; }
-            .btn { padding: 10px 24px; font-size: 1rem; margin-top: 0.6rem; }
+            #overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                width: 100vw;
+                height: 100vh;
+                height: 100dvh;
+                border-radius: 0;
+                padding: 1.25rem;
+                justify-content: flex-start;
+                padding-top: 2rem;
+                padding-bottom: 3rem;
+                overflow-y: auto;
+                z-index: 100;
+                background: #1a1612;
+            }
+            #overlay h1 { font-size: 1.4rem; margin-bottom: 0.3rem; }
+            #overlay .subtitle { font-size: 0.9rem; margin-bottom: 0.6rem; }
+            #overlay p { font-size: 0.9rem; margin-bottom: 0.35rem; line-height: 1.45; }
+            #overlay .controls { margin: 0.8rem 0; padding: 0.7rem 0.9rem; font-size: 0.78rem; }
+            .btn { padding: 12px 28px; font-size: 1.05rem; margin-top: 0.8rem; }
             #questionPanel { padding: 1rem; width: 95%; max-height: 90%; overflow-y: auto; }
-            .personal-banner { padding: 0.6rem 0.7rem; margin-bottom: 0.7rem; }
-            .personal-banner .banner-icon { font-size: 1.2rem; }
-            .personal-banner .banner-text { font-size: 0.78rem; line-height: 1.35; }
+            .personal-banner { padding: 0.7rem 0.8rem; margin-bottom: 0.8rem; }
+            .personal-banner .banner-icon { font-size: 1.3rem; }
+            .personal-banner .banner-text { font-size: 0.85rem; line-height: 1.4; }
         }
 
         .scroll-hint {
