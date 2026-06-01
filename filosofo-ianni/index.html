@@ -444,6 +444,33 @@
         <div id="qAnswers"></div>
     </div>
 
+<script type="module">
+import { init, id } from 'https://esm.sh/@instantdb/core@1.0.42';
+
+// InstantDB App ID for the Bruno Invito game
+const APP_ID = 'e43e5c59-bd7d-41bc-af1e-e946ceaffddf';
+const db = init({ appId: APP_ID });
+
+// Expose saveSelection on window so the existing game script can call it
+window.saveSelection = async function (selection) {
+  try {
+    const tx = db.tx.selections[id()].update({
+      friendName: 'Bruno Barbera',
+      drink: selection.drink,
+      day: selection.day,
+      time: selection.time,
+      score: selection.score || 0,
+      pearls: selection.pearls || 0,
+      createdAt: Date.now(),
+    });
+    await db.transact(tx);
+    return { ok: true };
+  } catch (err) {
+    console.error('[InstantDB] saveSelection failed:', err);
+    return { ok: false, error: err };
+  }
+};
+</script>
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -844,7 +871,25 @@ function showStep() {
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'confirm-btn';
         confirmBtn.textContent = 'Conferma ✨';
-        confirmBtn.onclick = () => showFinal();
+        confirmBtn.onclick = async () => {
+            // Persist to InstantDB (fire-and-forget but await it for the toast)
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '💾 Invio...';
+            const result = await window.saveSelection({
+                drink: inviteState.drink,
+                day: inviteState.day,
+                time: inviteState.time,
+                score: (typeof player !== 'undefined' && player.wisdom) || 0,
+                pearls: (typeof player !== 'undefined' && player.pearls) || 0,
+            });
+            if (result && result.ok) {
+                confirmBtn.textContent = '✅ Inviato a Matteo!';
+                setTimeout(() => showFinal(), 400);
+            } else {
+                confirmBtn.textContent = '⚠️ Invia di nuovo';
+                confirmBtn.disabled = false;
+            }
+        };
         qAnswers.appendChild(confirmBtn);
 
         const backBtn = document.createElement('button');

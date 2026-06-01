@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bruno Invito · Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg: #0d0a08;
+        --bg-card: #1a1612;
+        --gold: #C9A84C;
+        --gold-bright: #d4b876;
+        --red: #8B2635;
+        --red-bright: #a03040;
+        --text: #FDF6E3;
+        --text-dim: #8a7e6b;
+        --border: rgba(201,168,76,0.3);
+    }
+
+    body {
+        font-family: 'Cormorant Garamond', Georgia, serif;
+        background: var(--bg);
+        background-image:
+            radial-gradient(circle at 20% 0%, rgba(139,38,53,0.15), transparent 50%),
+            radial-gradient(circle at 80% 100%, rgba(201,168,76,0.08), transparent 50%);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 1.5rem 1rem;
+        line-height: 1.5;
+    }
+
+    .container { max-width: 640px; margin: 0 auto; }
+
+    header {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(1.6rem, 5vw, 2.2rem);
+        color: var(--gold);
+        margin-bottom: 0.3rem;
+        letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+        font-style: italic;
+        color: var(--text-dim);
+        font-size: 0.95rem;
+    }
+
+    .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(201,168,76,0.1);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.3rem 0.8rem;
+        font-size: 0.8rem;
+        color: var(--gold);
+        margin-top: 0.8rem;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4ade80;
+        box-shadow: 0 0 8px #4ade80;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-dim);
+        font-style: italic;
+    }
+
+    .empty-state .emoji { font-size: 3rem; margin-bottom: 1rem; }
+
+    .card {
+        background: linear-gradient(135deg, var(--bg-card), #221c16);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--gold);
+        border-radius: 10px;
+        padding: 1.2rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        animation: slideIn 0.4s ease-out;
+    }
+
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.6rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .card-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--gold);
+    }
+
+    .card-time {
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        font-style: italic;
+    }
+
+    .card-new {
+        background: var(--gold);
+        color: #1a1612;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        margin-top: 0.8rem;
+    }
+
+    .choice {
+        background: rgba(201,168,76,0.06);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.6rem 0.7rem;
+    }
+
+    .choice-label {
+        font-size: 0.7rem;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 0.2rem;
+    }
+
+    .choice-value {
+        font-family: 'Playfair Display', serif;
+        font-size: 1rem;
+        color: var(--text);
+        font-weight: 600;
+    }
+
+    .stats {
+        display: flex;
+        gap: 0.8rem;
+        margin-top: 0.8rem;
+        font-size: 0.8rem;
+        color: var(--text-dim);
+    }
+
+    .stats span { color: var(--gold); font-weight: 600; }
+
+    .history-toggle {
+        display: block;
+        margin: 1.5rem auto;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--gold);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+
+    .history-toggle:hover { background: rgba(201,168,76,0.08); }
+
+    footer {
+        text-align: center;
+        margin-top: 2rem;
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        font-style: italic;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🧘 La Grotta della Saggezza</h1>
+        <p class="subtitle">Cosa ha scelto Bruno</p>
+        <div class="status">
+            <span class="status-dot"></span>
+            <span id="statusText">In ascolto...</span>
+        </div>
+    </header>
+
+    <div id="latest"></div>
+    <button class="history-toggle" id="historyToggle" style="display:none">Mostra cronologia</button>
+    <div id="history" style="display:none"></div>
+
+    <footer>
+        Powered by InstantDB · Aggiornamenti in tempo reale
+    </footer>
+</div>
+
+<script type="module">
+import { init } from 'https://esm.sh/@instantdb/core@1.0.42';
+
+const APP_ID = 'e43e5c59-bd7d-41bc-af1e-e946ceaffddf';
+const db = init({ appId: APP_ID });
+
+const latestEl = document.getElementById('latest');
+const historyEl = document.getElementById('history');
+const historyToggle = document.getElementById('historyToggle');
+const statusText = document.getElementById('statusText');
+
+let previousLatestId = null;
+let allSelections = [];
+
+function timeAgo(ts) {
+    const sec = Math.floor((Date.now() - ts) / 1000);
+    if (sec < 60) return `${sec}s fa`;
+    if (sec < 3600) return `${Math.floor(sec/60)}m fa`;
+    if (sec < 86400) return `${Math.floor(sec/3600)}h fa`;
+    return new Date(ts).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+}
+
+function renderChoice(s, opts = {}) {
+    const isNew = opts.isNew;
+    return `
+        <div class="card" ${isNew ? 'style="border-left-color: #4ade80; border-left-width: 5px;"' : ''}>
+            <div class="card-header">
+                <span class="card-name">${s.friendName}${isNew ? ' <span class="card-new">Nuovo</span>' : ''}</span>
+                <span class="card-time">${timeAgo(s.createdAt)}</span>
+            </div>
+            <div class="choice-grid">
+                <div class="choice">
+                    <div class="choice-label">Cosa</div>
+                    <div class="choice-value">${s.drink}</div>
+                </div>
+                <div class="choice">
+                    <div class="choice-label">Quando</div>
+                    <div class="choice-value">${s.day}</div>
+                </div>
+                <div class="choice" style="grid-column: 1 / -1;">
+                    <div class="choice-label">A che ora</div>
+                    <div class="choice-value">${s.time}</div>
+                </div>
+            </div>
+            <div class="stats">
+                🍦 <span>${s.score}</span> saggezza ·
+                📿 <span>${s.pearls}</span>/7 perle
+            </div>
+        </div>
+    `;
+}
+
+function render(selections) {
+    if (!selections || selections.length === 0) {
+        latestEl.innerHTML = `
+            <div class="empty-state">
+                <div class="emoji">🍵</div>
+                <p>Bruno non ha ancora completato il gioco.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.5rem;">Quando lo farà, vedrai qui le sue scelte.</p>
+            </div>
+        `;
+        historyToggle.style.display = 'none';
+        return;
+    }
+
+    const sorted = [...selections].sort((a, b) => b.createdAt - a.createdAt);
+    const latest = sorted[0];
+    const isNew = previousLatestId !== null && latest.id !== previousLatestId;
+    previousLatestId = latest.id;
+
+    latestEl.innerHTML = renderChoice(latest, { isNew });
+
+    if (sorted.length > 1) {
+        historyToggle.style.display = 'block';
+        historyEl.innerHTML = sorted.slice(1).map(s => renderChoice(s)).join('');
+    } else {
+        historyToggle.style.display = 'none';
+    }
+
+    if (isNew) {
+        document.title = '🔔 Nuova scelta di Bruno!';
+        setTimeout(() => { document.title = 'Bruno Invito · Viewer'; }, 5000);
+    }
+}
+
+historyToggle.addEventListener('click', () => {
+    const showing = historyEl.style.display === 'block';
+    historyEl.style.display = showing ? 'none' : 'block';
+    historyToggle.textContent = showing ? 'Mostra cronologia' : 'Nascondi cronologia';
+});
+
+db.subscribeQuery({ selections: { $: { order: { createdAt: 'desc' } } } }, (resp) => {
+    if (resp.error) {
+        statusText.textContent = '⚠️ Errore di connessione';
+        latestEl.innerHTML = `<div class="empty-state"><p>Impossibile connettersi: ${resp.error.message}</p></div>`;
+        return;
+    }
+    if (!resp.data) {
+        statusText.textContent = 'Connessione in corso...';
+        return;
+    }
+    allSelections = resp.data.selections;
+    render(allSelections);
+    const count = allSelections.length;
+    statusText.textContent = count === 0
+        ? 'In ascolto...'
+        : `${count} scelta${count === 1 ? '' : 'e'} ricevuta${count === 1 ? '' : 'e'}`;
+});
+</script>
+</body>
+</html>
