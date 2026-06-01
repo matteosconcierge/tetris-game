@@ -271,20 +271,6 @@
             letter-spacing: 1px;
         }
 
-        .mailto-link {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 10px 24px;
-            background: rgba(201,168,76,0.15);
-            border: 1px solid #C9A84C;
-            border-radius: 6px;
-            color: #C9A84C;
-            font-family: 'Playfair Display', serif;
-            font-size: 1rem;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
         #mobileControls {
             display: none;
             width: 100%;
@@ -749,7 +735,7 @@ function showStep() {
 
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'confirm-btn';
-        confirmBtn.textContent = 'Conferma e invia mail 📧';
+        confirmBtn.textContent = 'Conferma ✨';
         confirmBtn.onclick = () => showFinal();
         qAnswers.appendChild(confirmBtn);
 
@@ -767,27 +753,12 @@ function showFinal() {
     const mobileControls = document.getElementById('mobileControls');
     if (mobileControls) mobileControls.style.display = 'none';
 
-    const subject = encodeURIComponent('Incontro a Roma con Matteo');
-    const body = encodeURIComponent(
-        `Ciao Bruno e Matteo,\n\n` +
-        `Avete confermato un incontro a Roma!\n\n` +
-        `Dettagli:\n` +
-        `- Tipo: ${inviteState.drink}\n` +
-        `- Giorno: ${inviteState.day}\n` +
-        `- Ora: ${inviteState.time}\n\n` +
-        `Buon divertimento! 🍺☕🍽️\n\n` +
-        `— Filosofo Ianni (via La Grotta della Saggezza)`
-    );
-    const mailto = `mailto:iannimatte@gmail.com,brunobarbera11@gmail.com?subject=${subject}&body=${body}`;
-
     overlay.innerHTML = `
         <h1>🧘 Il Filosofo ha parlato!</h1>
         <p class="subtitle">La saggezza trionfa ancora una volta nella grotta della Ciociaria</p>
         <p>Hai raccolto <strong>${player.wisdom}</strong> punti saggezza e <strong>${player.pearls}</strong> perle!</p>
         <p>Hai scelto:<br><strong style="color: #C9A84C;">${inviteState.drink}</strong><br>${inviteState.day} alle ${inviteState.time}</p>
         <p>Matteo ti aspetta a Roma. Ci vediamo presto!</p>
-        <a href="${mailto}" class="mailto-link">📧 Invia mail di conferma</a>
-        <p style="font-size: 0.8rem; opacity: 0.6; margin-top: 0.5rem;">Clicca per aprire la tua app mail con il promemoria pre-compilato</p>
         <button class="btn" onclick="startGame()" style="margin-top: 1rem;">Gioca Ancora</button>
     `;
     overlay.classList.remove('hidden');
