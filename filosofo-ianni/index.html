@@ -264,13 +264,45 @@
             body { padding: 0; }
             #gameContainer { border-radius: 0; max-width: 100%; height: 52vh; min-height: 340px; aspect-ratio: auto; }
             canvas { border-radius: 0; }
-            #overlay { padding: 1rem; justify-content: flex-start; padding-top: 1.5rem; overflow-y: auto; }
-            #overlay h1 { font-size: 1.4rem; margin-bottom: 0.3rem; }
-            #overlay .subtitle { font-size: 0.9rem; margin-bottom: 0.8rem; }
-            #overlay p { font-size: 0.85rem; margin-bottom: 0.3rem; }
-            #overlay .controls { margin: 0.8rem 0; padding: 0.6rem 1rem; font-size: 0.75rem; }
-            .btn { padding: 10px 24px; font-size: 1rem; margin-top: 0.8rem; }
+            #overlay { padding: 1rem; justify-content: flex-start; padding-top: 1.2rem; padding-bottom: 2.5rem; overflow-y: auto; }
+            #overlay h1 { font-size: 1.3rem; margin-bottom: 0.2rem; }
+            #overlay .subtitle { font-size: 0.85rem; margin-bottom: 0.5rem; }
+            #overlay p { font-size: 0.82rem; margin-bottom: 0.25rem; line-height: 1.4; }
+            #overlay .controls { margin: 0.6rem 0; padding: 0.5rem 0.8rem; font-size: 0.72rem; }
+            .btn { padding: 10px 24px; font-size: 1rem; margin-top: 0.6rem; }
             #questionPanel { padding: 1rem; width: 95%; max-height: 90%; overflow-y: auto; }
+            .personal-banner { padding: 0.6rem 0.7rem; margin-bottom: 0.7rem; }
+            .personal-banner .banner-icon { font-size: 1.2rem; }
+            .personal-banner .banner-text { font-size: 0.78rem; line-height: 1.35; }
+        }
+
+        .scroll-hint {
+            margin-top: 0.6rem;
+            font-size: 0.85rem;
+            color: #C9A84C;
+            text-align: center;
+            animation: bounceDown 1.6s ease-in-out infinite;
+            opacity: 0.85;
+        }
+
+        .scroll-hint.hidden {
+            display: none;
+        }
+
+        @keyframes bounceDown {
+            0%, 100% { transform: translateY(0); opacity: 0.85; }
+            50% { transform: translateY(6px); opacity: 1; }
+        }
+
+        #overlay.scrollable::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to bottom, transparent, #1a1612 90%);
+            pointer-events: none;
         }
 
         .day-btn, .time-btn {
@@ -399,6 +431,7 @@
                 Raggiungi il tappetino di meditazione alla fine della grotta
             </div>
             <button class="btn" onclick="startGame()">Inizia il Viaggio</button>
+            <div class="scroll-hint" id="scrollHint">↓ scorri per iniziare</div>
         </div>
     </div>
     <div id="mobileControls">
@@ -562,6 +595,37 @@ function setupMobileBtn(id, key) {
 setupMobileBtn('btnLeft', 'ArrowLeft');
 setupMobileBtn('btnRight', 'ArrowRight');
 setupMobileBtn('btnJump', 'Space');
+
+// Scroll-hint logic for the intro overlay
+(function setupScrollHint() {
+    const overlayEl = document.getElementById('overlay');
+    const hint = document.getElementById('scrollHint');
+    if (!overlayEl || !hint) return;
+
+    function updateScrollState() {
+        const isScrollable = overlayEl.scrollHeight > overlayEl.clientHeight + 4;
+        if (isScrollable) {
+            overlayEl.classList.add('scrollable');
+            hint.classList.remove('hidden');
+        } else {
+            overlayEl.classList.remove('scrollable');
+            hint.classList.add('hidden');
+        }
+    }
+
+    overlayEl.addEventListener('scroll', () => {
+        if (overlayEl.scrollTop > 20) {
+            hint.classList.add('hidden');
+        } else {
+            updateScrollState();
+        }
+    });
+
+    window.addEventListener('resize', updateScrollState);
+    // Run after layout settles
+    setTimeout(updateScrollState, 100);
+    setTimeout(updateScrollState, 500);
+})();
 
 function startGame() {
     overlay.classList.add('hidden');
