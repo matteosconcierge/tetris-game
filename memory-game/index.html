@@ -165,6 +165,10 @@
         cursor: pointer;
         perspective: 800px;
         transform-style: preserve-3d;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
     }
 
     .card-inner {
@@ -596,7 +600,6 @@
                 </div>
             `;
             el.addEventListener('click', () => onCardClick(idx));
-            el.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
             grid.appendChild(el);
         });
     }
