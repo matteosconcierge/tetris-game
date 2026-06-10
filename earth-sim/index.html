@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Earth Climate Simulator — Arcade</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0e17;
+      color: #fff;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #canvas-container {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+    }
+    #ui-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #ui-overlay > * { pointer-events: auto; }
+
+    .panel {
+      background: rgba(10, 20, 40, 0.88);
+      border: 1px solid rgba(100, 200, 255, 0.2);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      padding: 14px;
+    }
+
+    /* Top bar */
+    #top-bar {
+      position: absolute;
+      top: 10px; left: 10px; right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    #game-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #64c8ff;
+      letter-spacing: 1px;
+    }
+    #year-display {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      text-align: center;
+      min-width: 100px;
+    }
+    #speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #speed-control label {
+      font-size: 11px;
+      color: #88aacc;
+      text-transform: uppercase;
+    }
+    #speed-slider {
+      width: 100px;
+      accent-color: #64c8ff;
+    }
+    #play-pause {
+      background: #64c8ff;
+      border: none;
+      border-radius: 6px;
+      color: #0a0e17;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+
+    /* Left panel — dials */
+    #dials-panel {
+      position: absolute;
+      top: 70px;
+      left: 10px;
+      width: 260px;
+      max-height: calc(100vh - 90px);
+      overflow-y: auto;
+    }
+    #dials-panel h3 {
+      font-size: 12px;
+      color: #64c8ff;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .dial-row {
+      margin-bottom: 10px;
+    }
+    .dial-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 4px;
+      color: #aaccee;
+    }
+    .dial-label .value {
+      color: #fff;
+      font-weight: 600;
+    }
+    .dial-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #1a2a44;
+      outline: none;
+      -webkit-appearance: none;
+      accent-color: #64c8ff;
+    }
+    .dial-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #64c8ff;
+      cursor: pointer;
+    }
+    .dial-slider::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #64c8ff;
+      cursor: pointer;
+      border: none;
+    }
+
+    /* Right panel — stats */
+    #stats-panel {
+      position: absolute;
+      top: 70px;
+      right: 10px;
+      width: 220px;
+    }
+    #stats-panel h3 {
+      font-size: 12px;
+      color: #64c8ff;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(100,200,255,0.1);
+      font-size: 12px;
+    }
+    .stat-name { color: #88aacc; }
+    .stat-value {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-value.hot { color: #ff6b6b; }
+    .stat-value.cold { color: #64c8ff; }
+    .stat-value.warn { color: #f9a825; }
+    .stat-value.ok { color: #51cf66; }
+
+    /* Bottom bar — events */
+    #events-panel {
+      position: absolute;
+      bottom: 10px;
+      left: 10px; right: 10px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px;
+    }
+    .event-btn {
+      background: rgba(20, 40, 80, 0.9);
+      border: 1px solid rgba(100,200,255,0.25);
+      border-radius: 8px;
+      color: #aaccee;
+      font-size: 11px;
+      padding: 8px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .event-btn:hover {
+      background: rgba(100, 200, 255, 0.2);
+      border-color: #64c8ff;
+      color: #fff;
+    }
+    .event-btn.nuclear { border-color: rgba(255, 80, 80, 0.4); color: #ff8080; }
+    .event-btn.nuclear:hover { background: rgba(255, 80, 80, 0.2); }
+    .event-btn.major { border-color: rgba(255, 180, 0, 0.4); color: #ffb400; }
+    .event-btn.major:hover { background: rgba(255, 180, 0, 0.2); }
+
+    /* Data overlay on globe */
+    #globe-data {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+    #globe-temp {
+      font-size: 48px;
+      font-weight: 800;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+      transition: color 0.5s;
+    }
+    #globe-sea {
+      font-size: 14px;
+      font-weight: 600;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+      margin-top: 4px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #dials-panel { width: 200px; top: 60px; }
+      #stats-panel { width: 160px; top: 60px; }
+      #year-display { font-size: 20px; }
+      #globe-temp { font-size: 32px; }
+      .event-btn { font-size: 10px; padding: 6px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<div id="ui-overlay">
+  <!-- Top bar -->
+  <div id="top-bar">
+    <div class="panel" style="display:flex;align-items:center;gap:12px;">
+      <div id="game-title">🌍 EARTH CLIMATE SIMULATOR</div>
+    </div>
+    <div class="panel">
+      <div id="year-display">2025</div>
+    </div>
+    <div class="panel" id="speed-control">
+      <label>Time Speed</label>
+      <input type="range" id="speed-slider" min="0" max="5" step="0.5" value="1">
+      <button id="play-pause">⏸</button>
+    </div>
+  </div>
+
+  <!-- Left: Dials -->
+  <div id="dials-panel" class="panel">
+    <h3>🔧 Dials</h3>
+    <div id="dials-container"></div>
+  </div>
+
+  <!-- Right: Stats -->
+  <div id="stats-panel" class="panel">
+    <h3>📊 Planet Data</h3>
+    <div id="stats-container"></div>
+  </div>
+
+  <!-- Center: Globe overlay -->
+  <div id="globe-data">
+    <div id="globe-temp">+14.8°C</div>
+    <div id="globe-sea">Sea level: 0 cm</div>
+  </div>
+
+  <!-- Bottom: Events -->
+  <div id="events-panel">
+    <button class="event-btn nuclear" data-event="nuclear_war">☢️ Nuclear War</button>
+    <button class="event-btn major" data-event="supervolcano">🌋 Supervolcano</button>
+    <button class="event-btn major" data-event="asteroid">☄️ Asteroid Impact</button>
+    <button class="event-btn" data-event="pandemic">🦠 Global Pandemic</button>
+    <button class="event-btn" data-event="solar_flare">☀️ Solar Flare</button>
+    <button class="event-btn" data-event="green_revolution">🌱 Green Revolution</button>
+    <button class="event-btn" data-event="carbon_capture">🧪 Carbon Capture</button>
+    <button class="event-btn" data-event="reforestation">🌲 Reforestation</button>
+    <button class="event-btn" data-event="ocean_cleanup">🌊 Ocean Cleanup</button>
+    <button class="event-btn" data-event="ice_age">❄️ Ice Age</button>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ==================== SCENE SETUP ====================
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05080f);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 3.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.minDistance = 1.8;
+controls.maxDistance = 8;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.5;
+
+// ==================== EARTH ====================
+const earthGroup = new THREE.Group();
+scene.add(earthGroup);
+
+const loader = new THREE.TextureLoader();
+
+// Earth base
+const earthGeometry = new THREE.SphereGeometry(1, 64, 64);
+const earthMaterial = new THREE.MeshPhongMaterial({
+  color: 0xffffff,
+  map: loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'),
+  bumpMap: loader.load('https://unpkg.com/three-globe/example/img/earth-topology.png'),
+  bumpScale: 0.05,
+  specular: new THREE.Color(0x333333),
+  shininess: 5,
+});
+const earth = new THREE.Mesh(earthGeometry, earthMaterial);
+earthGroup.add(earth);
+
+// Clouds
+const cloudGeometry = new THREE.SphereGeometry(1.015, 64, 64);
+const cloudMaterial = new THREE.MeshPhongMaterial({
+  map: loader.load('https://unpkg.com/three-globe/example/img/earth-clouds.png'),
+  transparent: true,
+  opacity: 0.4,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
+const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+earthGroup.add(clouds);
+
+// Atmosphere glow
+const atmoGeometry = new THREE.SphereGeometry(1.12, 64, 64);
+const atmoMaterial = new THREE.ShaderMaterial({
+  transparent: true,
+  side: THREE.BackSide,
+  uniforms: {
+    c: { value: 0.6 },
+    p: { value: 4.0 },
+    glowColor: { value: new THREE.Color(0x64c8ff) },
+    viewVector: { value: camera.position },
+  },
+  vertexShader: `
+    uniform vec3 viewVector;
+    varying float intensity;
+    void main() {
+      vec3 vNormal = normalize(normalMatrix * normal);
+      vec3 vNormel = normalize(normalMatrix * viewVector);
+      intensity = pow(0.65 - dot(vNormal, vNormel), 4.0);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform vec3 glowColor;
+    varying float intensity;
+    void main() {
+      vec3 glow = glowColor * intensity;
+      gl_FragColor = vec4(glow, intensity);
+    }
+  `,
+});
+const atmosphere = new THREE.Mesh(atmoGeometry, atmoMaterial);
+earthGroup.add(atmosphere);
+
+// Stars
+const starsGeometry = new THREE.BufferGeometry();
+const starsCount = 3000;
+const posArray = new Float32Array(starsCount * 3);
+for (let i = 0; i < starsCount * 3; i++) {
+  posArray[i] = (Math.random() - 0.5) * 50;
+}
+starsGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+const starsMaterial = new THREE.PointsMaterial({ size: 0.02, color: 0xffffff, transparent: true, opacity: 0.8 });
+const stars = new THREE.Points(starsGeometry, starsMaterial);
+scene.add(stars);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+scene.add(ambientLight);
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+sunLight.position.set(5, 3, 5);
+scene.add(sunLight);
+const backLight = new THREE.DirectionalLight(0x445566, 0.3);
+backLight.position.set(-5, -2, -5);
+scene.add(backLight);
+
+// ==================== SIMULATION STATE ====================
+let year = 2025;
+let isPlaying = true;
+let timeSpeed = 1;
+let lastTime = performance.now();
+
+const state = {
+  co2: 420,
+  temperature: 14.8,
+  seaLevel: 0,
+  deforestation: 15,
+  pollution: 30,
+  nuclear: 0,
+  solarActivity: 50,
+  oceanAcidity: 8.1,
+  iceCaps: 100,
+  biodiversity: 85,
+  ozone: 92,
+  methane: 1850,
+  aerosols: 10,
+  albedo: 30,
+  population: 8000,
+  renewableEnergy: 20,
+  fossilFuels: 75,
+  agriculture: 50,
+  industry: 60,
+  transport: 55,
+};
+
+const baseState = { ...state };
+
+const dialDefs = [
+  { key: 'co2', label: 'CO₂ Emissions (ppm)', min: 280, max: 1200, unit: 'ppm', step: 1 },
+  { key: 'methane', label: 'Methane (ppb)', min: 700, max: 4000, unit: 'ppb', step: 10 },
+  { key: 'fossilFuels', label: 'Fossil Fuel Use', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'renewableEnergy', label: 'Renewable Energy', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'deforestation', label: 'Deforestation', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'reforestation', label: 'Reforestation', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'pollution', label: 'Air Pollution', min: 0, max: 100, unit: 'AQI', step: 1 },
+  { key: 'industry', label: 'Industrial Activity', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'transport', label: 'Transport Emissions', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'agriculture', label: 'Agriculture Impact', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'population', label: 'Population (millions)', min: 1000, max: 15000, unit: 'M', step: 100 },
+  { key: 'nuclear', label: 'Nuclear Activity', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'solarActivity', label: 'Solar Activity', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'aerosols', label: 'Aerosols', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'albedo', label: 'Surface Albedo', min: 10, max: 80, unit: '%', step: 1 },
+  { key: 'ozone', label: 'Ozone Layer', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'oceanAcidity', label: 'Ocean pH', min: 7.0, max: 8.5, unit: '', step: 0.01 },
+  { key: 'iceCaps', label: 'Polar Ice Caps', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'biodiversity', label: 'Biodiversity Index', min: 0, max: 100, unit: '%', step: 1 },
+  { key: 'carbonCapture', label: 'Carbon Capture', min: 0, max: 100, unit: '%', step: 1 },
+];
+
+// Add missing state keys
+for (const d of dialDefs) {
+  if (!(d.key in state)) state[d.key] = (d.min + d.max) / 2;
+}
+
+// ==================== UI BUILD ====================
+const dialsContainer = document.getElementById('dials-container');
+for (const d of dialDefs) {
+  const row = document.createElement('div');
+  row.className = 'dial-row';
+  row.innerHTML = `
+    <div class="dial-label">
+      <span>${d.label}</span>
+      <span class="value" id="val-${d.key}">${state[d.key]}${d.unit}</span>
+    </div>
+    <input type="range" class="dial-slider" id="dial-${d.key}"
+           min="${d.min}" max="${d.max}" step="${d.step}" value="${state[d.key]}">
+  `;
+  dialsContainer.appendChild(row);
+
+  const slider = row.querySelector('input');
+  slider.addEventListener('input', (e) => {
+    state[d.key] = parseFloat(e.target.value);
+    document.getElementById(`val-${d.key}`).textContent = state[d.key] + d.unit;
+    updateSimulation();
+  });
+}
+
+const statDefs = [
+  { key: 'temperature', label: 'Global Temp', unit: '°C', base: 14.8, decimals: 1, cls: 'ok' },
+  { key: 'seaLevel', label: 'Sea Level Rise', unit: 'cm', base: 0, decimals: 1, cls: 'ok' },
+  { key: 'co2', label: 'CO₂', unit: 'ppm', base: 420, decimals: 0, cls: 'ok' },
+  { key: 'iceCaps', label: 'Ice Caps', unit: '%', base: 100, decimals: 0, cls: 'ok' },
+  { key: 'biodiversity', label: 'Biodiversity', unit: '%', base: 85, decimals: 0, cls: 'ok' },
+  { key: 'oceanAcidity', label: 'Ocean pH', unit: '', base: 8.1, decimals: 2, cls: 'ok' },
+  { key: 'ozone', label: 'Ozone', unit: '%', base: 92, decimals: 0, cls: 'ok' },
+  { key: 'population', label: 'Population', unit: 'M', base: 8000, decimals: 0, cls: 'ok' },
+];
+
+const statsContainer = document.getElementById('stats-container');
+for (const s of statDefs) {
+  const row = document.createElement('div');
+  row.className = 'stat-row';
+  row.id = `stat-${s.key}`;
+  row.innerHTML = `
+    <span class="stat-name">${s.label}</span>
+    <span class="stat-value ${s.cls}" id="statv-${s.key}">${s.base.toFixed(s.decimals)}${s.unit}</span>
+  `;
+  statsContainer.appendChild(row);
+}
+
+// ==================== SIMULATION LOGIC ====================
+function updateSimulation() {
+  // Calculate derived values based on dials
+  const co2Factor = (state.co2 - 280) / 920;
+  const methaneFactor = (state.methane - 700) / 3300;
+  const fossilFactor = state.fossilFuels / 100;
+  const deforestFactor = state.deforestation / 100;
+  const reforestFactor = state.reforestation / 100;
+  const pollutionFactor = state.pollution / 100;
+  const nuclearFactor = state.nuclear / 100;
+  const solarFactor = state.solarActivity / 100;
+  const aerosolFactor = state.aerosols / 100;
+  const albedoFactor = state.albedo / 100;
+  const ozoneFactor = state.ozone / 100;
+  const carbonCaptureFactor = (state.carbonCapture || 0) / 100;
+  const renewableFactor = state.renewableEnergy / 100;
+
+  // Temperature: CO2 + methane + fossil + deforestation + nuclear + solar - aerosols - albedo - carbonCapture - renewable
+  let tempChange = 0;
+  tempChange += co2Factor * 3.5;
+  tempChange += methaneFactor * 1.2;
+  tempChange += fossilFactor * 1.5;
+  tempChange += deforestFactor * 0.8;
+  tempChange += nuclearFactor * 0.5;
+  tempChange += solarFactor * 0.3;
+  tempChange -= aerosolFactor * 0.6;
+  tempChange -= (albedoFactor - 0.3) * 2.0;
+  tempChange -= carbonCaptureFactor * 1.0;
+  tempChange -= renewableFactor * 0.5;
+  tempChange += reforestFactor * -0.3;
+  state.temperature = baseState.temperature + tempChange;
+
+  // Sea level: temp + ice caps
+  const iceLoss = Math.max(0, 1 - (state.iceCaps / 100));
+  state.seaLevel = tempChange * 15 + iceLoss * 200;
+
+  // Ocean acidity: CO2
+  state.oceanAcidity = Math.max(7.0, 8.1 - co2Factor * 1.0 + carbonCaptureFactor * 0.3);
+
+  // Biodiversity: deforestation + pollution + temp + population
+  let bioLoss = 0;
+  bioLoss += deforestFactor * 25;
+  bioLoss += pollutionFactor * 15;
+  bioLoss += Math.abs(tempChange) * 5;
+  bioLoss += (state.population - 8000) / 7000 * 10;
+  bioLoss -= reforestFactor * 15;
+  bioLoss -= carbonCaptureFactor * 5;
+  state.biodiversity = Math.max(0, Math.min(100, baseState.biodiversity - bioLoss));
+
+  // Ozone: aerosols + industry
+  state.ozone = Math.max(0, Math.min(100, baseState.ozone - aerosolFactor * 20 - pollutionFactor * 15 + carbonCaptureFactor * 5));
+
+  // Population
+  state.population = Math.max(1000, baseState.population + (state.renewableEnergy - 20) * 20 + (state.agriculture - 50) * 10 - nuclearFactor * 1000);
+
+  // Visual updates
+  updateVisuals();
+  updateStatsUI();
+}
+
+function updateVisuals() {
+  const temp = state.temperature;
+  const co2 = state.co2;
+
+  // Earth color: shift from blue-green to brown-red as temp rises
+  const tempRatio = Math.max(0, Math.min(1, (temp - 14) / 8));
+  const r = 1.0 - tempRatio * 0.3;
+  const g = 1.0 - tempRatio * 0.5;
+  const b = 1.0 - tempRatio * 0.2;
+  earthMaterial.color.setRGB(r, g, b);
+
+  // Atmosphere color: shift from blue to yellow/brown as pollution rises
+  const pollutionRatio = state.pollution / 100;
+  const atmoR = 0.39 + pollutionRatio * 0.4;
+  const atmoG = 0.78 - pollutionRatio * 0.4;
+  const atmoB = 1.0 - pollutionRatio * 0.6;
+  atmoMaterial.uniforms.glowColor.value.setRGB(atmoR, atmoG, atmoB);
+
+  // Cloud opacity: pollution increases clouds
+  cloudMaterial.opacity = 0.3 + pollutionRatio * 0.4 + (state.aerosols / 100) * 0.3;
+
+  // Ice caps: if low, make earth slightly darker
+  const iceRatio = state.iceCaps / 100;
+  earthMaterial.specular.setScalar(0.1 + iceRatio * 0.4);
+
+  // Sea level visual: scale atmosphere to simulate sea rise
+  const seaScale = 1 + (state.seaLevel / 500);
+  atmosphere.scale.setScalar(seaScale);
+
+  // Globe overlay
+  const globeTemp = document.getElementById('globe-temp');
+  globeTemp.textContent = (temp >= 0 ? '+' : '') + temp.toFixed(1) + '°C';
+  if (temp > 20) globeTemp.style.color = '#ff6b6b';
+  else if (temp > 17) globeTemp.style.color = '#f9a825';
+  else if (temp > 14) globeTemp.style.color = '#51cf66';
+  else globeTemp.style.color = '#64c8ff';
+
+  document.getElementById('globe-sea').textContent = 'Sea level: ' + state.seaLevel.toFixed(0) + ' cm';
+}
+
+function updateStatsUI() {
+  for (const s of statDefs) {
+    const el = document.getElementById(`statv-${s.key}`);
+    const val = state[s.key];
+    el.textContent = val.toFixed(s.decimals) + s.unit;
+
+    // Color coding
+    const diff = val - s.base;
+    el.className = 'stat-value';
+    if (s.key === 'temperature') {
+      if (diff > 2) el.classList.add('hot');
+      else if (diff > 0.5) el.classList.add('warn');
+      else if (diff < -1) el.classList.add('cold');
+      else el.classList.add('ok');
+    } else if (s.key === 'seaLevel') {
+      if (diff > 50) el.classList.add('hot');
+      else if (diff > 10) el.classList.add('warn');
+      else el.classList.add('ok');
+    } else if (['iceCaps', 'biodiversity', 'ozone'].includes(s.key)) {
+      if (diff < -20) el.classList.add('hot');
+      else if (diff < -5) el.classList.add('warn');
+      else el.classList.add('ok');
+    } else if (s.key === 'oceanAcidity') {
+      if (val < 7.8) el.classList.add('hot');
+      else if (val < 8.0) el.classList.add('warn');
+      else el.classList.add('ok');
+    } else {
+      el.classList.add('ok');
+    }
+  }
+}
+
+// ==================== TIME & EVENTS ====================
+const yearDisplay = document.getElementById('year-display');
+const speedSlider = document.getElementById('speed-slider');
+const playPauseBtn = document.getElementById('play-pause');
+
+speedSlider.addEventListener('input', (e) => {
+  timeSpeed = parseFloat(e.target.value);
+});
+
+playPauseBtn.addEventListener('click', () => {
+  isPlaying = !isPlaying;
+  playPauseBtn.textContent = isPlaying ? '⏸' : '▶';
+  controls.autoRotate = isPlaying;
+});
+
+// Events
+const events = {
+  nuclear_war: () => {
+    state.nuclear = Math.min(100, state.nuclear + 50);
+    state.co2 += 100;
+    state.aerosols = Math.min(100, state.aerosols + 80);
+    state.biodiversity = Math.max(0, state.biodiversity - 30);
+    state.population = Math.max(1000, state.population - 3000);
+    alert('☢️ Nuclear War: civilization devastated, nuclear winter begins');
+  },
+  supervolcano: () => {
+    state.aerosols = Math.min(100, state.aerosols + 90);
+    state.temperature -= 3;
+    state.biodiversity = Math.max(0, state.biodiversity - 20);
+    alert('🌋 Supervolcano: global cooling, volcanic winter');
+  },
+  asteroid: () => {
+    state.aerosols = Math.min(100, state.aerosols + 95);
+    state.temperature -= 5;
+    state.biodiversity = Math.max(0, state.biodiversity - 50);
+    state.population = Math.max(1000, state.population - 4000);
+    alert('☄️ Asteroid Impact: mass extinction event');
+  },
+  pandemic: () => {
+    state.population = Math.max(1000, state.population - 2000);
+    state.industry = Math.max(0, state.industry - 20);
+    state.transport = Math.max(0, state.transport - 30);
+    alert('🦠 Global Pandemic: population reduced, emissions drop');
+  },
+  solar_flare: () => {
+    state.solarActivity = Math.min(100, state.solarActivity + 40);
+    state.renewableEnergy = Math.min(100, state.renewableEnergy + 10);
+    alert('☀️ Solar Flare: grid disruptions, auroras visible');
+  },
+  green_revolution: () => {
+    state.renewableEnergy = Math.min(100, state.renewableEnergy + 30);
+    state.fossilFuels = Math.max(0, state.fossilFuels - 25);
+    state.reforestation = Math.min(100, state.reforestation + 20);
+    alert('🌱 Green Revolution: renewables surge, emissions drop');
+  },
+  carbon_capture: () => {
+    state.carbonCapture = Math.min(100, state.carbonCapture + 40);
+    state.co2 = Math.max(280, state.co2 - 150);
+    alert('🧪 Carbon Capture: CO₂ scrubbers deployed globally');
+  },
+  reforestation: () => {
+    state.reforestation = Math.min(100, state.reforestation + 30);
+    state.deforestation = Math.max(0, state.deforestation - 20);
+    state.biodiversity = Math.min(100, state.biodiversity + 15);
+    alert('🌲 Reforestation: forests restored, carbon sinks active');
+  },
+  ocean_cleanup: () => {
+    state.pollution = Math.max(0, state.pollution - 30);
+    state.biodiversity = Math.min(100, state.biodiversity + 10);
+    alert('🌊 Ocean Cleanup: plastic removed, marine life recovering');
+  },
+  ice_age: () => {
+    state.temperature -= 8;
+    state.iceCaps = Math.min(100, state.iceCaps + 40);
+    state.seaLevel = Math.max(0, state.seaLevel - 100);
+    alert('❄️ Ice Age: glaciers advance, sea levels drop');
+  },
+};
+
+for (const btn of document.querySelectorAll('.event-btn')) {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.event;
+    if (events[key]) events[key]();
+    updateSimulation();
+    // Update sliders
+    for (const d of dialDefs) {
+      const slider = document.getElementById(`dial-${d.key}`);
+      if (slider) {
+        slider.value = state[d.key];
+        document.getElementById(`val-${d.key}`).textContent = state[d.key] + d.unit;
+      }
+    }
+  });
+}
+
+// ==================== ANIMATION LOOP ====================
+function animate() {
+  requestAnimationFrame(animate);
+
+  const now = performance.now();
+  const dt = (now - lastTime) / 1000;
+  lastTime = now;
+
+  if (isPlaying && timeSpeed > 0) {
+    year += dt * timeSpeed * 0.5;
+    yearDisplay.textContent = Math.floor(year);
+  }
+
+  controls.update();
+  atmoMaterial.uniforms.viewVector.value = camera.position;
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// Resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Initial update
+updateSimulation();
+
+</script>
+</body>
+</html>
