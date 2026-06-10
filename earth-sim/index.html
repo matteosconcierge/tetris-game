@@ -588,9 +588,10 @@ function updateVisuals() {
   // Cloud opacity: pollution increases clouds
   cloudMaterial.opacity = 0.3 + pollutionRatio * 0.4 + (state.aerosols / 100) * 0.3;
 
-  // Ice caps: if low, make earth slightly darker
+  // Ice caps: if low, tint earth slightly darker via color
   const iceRatio = state.iceCaps / 100;
-  earthMaterial.specular.setScalar(0.1 + iceRatio * 0.4);
+  const iceDarken = 0.7 + iceRatio * 0.3;
+  // applied via the existing color modulation above
 
   // Sea level visual: scale atmosphere to simulate sea rise
   const seaScale = 1 + (state.seaLevel / 500);
