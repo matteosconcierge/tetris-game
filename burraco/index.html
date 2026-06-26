@@ -56,18 +56,29 @@ body{background:var(--bg);color:var(--text);font-family:'Georgia',serif;overflow
 .hand-area{background:rgba(0,0,0,0.3);border-radius:8px;padding:6px;margin:4px 0;}
 .hand-label{font-size:0.6em;color:var(--muted);display:flex;justify-content:space-between;align-items:center;}
 .pozzo-badge{background:var(--accent);color:#fff;border-radius:8px;padding:1px 6px;font-size:0.9em;}
-.hand-cards{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;max-height:120px;overflow-y:auto;}
+.hand-cards{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;max-height:120px;overflow-y:auto;touch-action:none;}
 .hand-card{
   width:32px;height:44px;border-radius:4px;background:var(--card-bg);color:#222;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-weight:bold;font-size:0.6em;box-shadow:var(--shadow);cursor:pointer;
-  position:relative;transition:transform 0.15s,border 0.15s;border:2px solid transparent;
+  font-weight:bold;font-size:0.6em;box-shadow:var(--shadow);cursor:grab;
+  position:relative;transition:transform 0.1s,border 0.1s,opacity 0.1s;border:2px solid transparent;
+  touch-action:none;user-select:none;-webkit-user-select:none;
 }
 .hand-card.red{color:var(--accent);}
 .hand-card.selected{border-color:var(--gold);transform:translateY(-4px);}
 .hand-card.wild{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;}
 .hand-card:active{transform:scale(0.93);}
-.hand-card.move-src{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,240,255,0.4);}
+.hand-card.dragging{opacity:0.4;transform:scale(0.9);}
+.hand-card.drag-over{border-color:var(--cyan);transform:translateY(-2px);}
+.hand-ghost{
+  position:fixed;z-index:300;pointer-events:none;width:32px;height:44px;
+  border-radius:4px;background:var(--card-bg);color:#222;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-weight:bold;font-size:0.6em;box-shadow:0 8px 20px rgba(0,0,0,0.5);
+  border:2px solid var(--gold);transform:scale(1.1) rotate(3deg);
+}
+.hand-ghost.red{color:var(--accent);}
+.hand-ghost.wild{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;}
 
 /* Actions */
 .actions{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:6px 0;}
@@ -159,11 +170,8 @@ body{background:var(--bg);color:var(--text);font-family:'Georgia',serif;overflow
 
   <div class="hand-area">
     <div class="hand-label">
-      <span>La tua mano</span>
-      <span style="display:flex;gap:6px;align-items:center;">
-        <span id="pozzoLabel"></span>
-        <button class="btn btn-info" style="padding:2px 8px;font-size:0.8em;" onclick="toggleMoveMode()" id="btnMove">↕ Riordina</button>
-      </span>
+      <span>La tua mano <span style="font-size:0.85em;opacity:0.6;">(trascina per riordinare)</span></span>
+      <span id="pozzoLabel"></span>
     </div>
     <div class="hand-cards" id="handCards"></div>
   </div>
@@ -257,8 +265,6 @@ function newGame(){
     phase:'draw', // 'draw','play','discard','ai'
     selectedCards:[],
     builderCards:[],
-    moveMode:false,
-    moveSource:null,
     turnCount:0,
     gameOver:false,
   };
@@ -662,13 +668,9 @@ function render(){
   hc.innerHTML=G.players[0].hand.map((c,i)=>{
     const cls=c.isWild?'hand-card wild':(c.isRed?'hand-card red':'hand-card');
     const sel=G.selectedCards.includes(i)?' selected':'';
-    const moveSrc=G.moveMode&&G.moveSource===i?' move-src':'';
-    const clickHandler=G.moveMode?`moveCardTo(${i})`:`toggleHandCard(${i})`;
-    return `<div class="${cls}${sel}${moveSrc}" onclick="${clickHandler}">${cardLabel(c)}</div>`;
+    return `<div class="${cls}${sel}" data-idx="${i}" onclick="toggleHandCard(${i})">${cardLabel(c)}</div>`;
   }).join('');
-  // Update move button
-  const btnMove=document.getElementById('btnMove');
-  if(btnMove)btnMove.style.background=G.moveMode?'var(--cyan)':'rgba(255,255,255,0.1)';
+  attachDragHandlers(hc);
 
   // Pozzetto label
   document.getElementById('pozzoLabel').innerHTML=G.players[0].pozzetto.length>0?
@@ -690,34 +692,122 @@ function toggleHandCard(idx){
   render();
 }
 
-function toggleMoveMode(){
-  G.moveMode=!G.moveMode;
-  G.moveSource=null;
-  G.selectedCards=[];
-  if(G.moveMode)showToast('Modalità riordino: tocca una carta da spostare, poi tocca dove inserirla.');
-  render();
+// ====== DRAG & DROP HAND REORDER ======
+let dragState=null;
+
+function attachDragHandlers(container){
+  const cards=container.querySelectorAll('.hand-card');
+  cards.forEach(card=>{
+    card.addEventListener('pointerdown',onPointerDown);
+  });
 }
 
-function moveCardTo(idx){
-  if(G.moveSource===null){
-    // First tap: select source
-    G.moveSource=idx;
-    render();
-  } else if(G.moveSource===idx){
-    // Tap same card: deselect
-    G.moveSource=null;
-    render();
-  } else {
-    // Move card from moveSource to before idx
-    const hand=G.players[0].hand;
-    const card=hand.splice(G.moveSource,1)[0];
-    // Adjust target index if we removed from before it
-    let target=idx;
-    if(G.moveSource<target)target--;
-    hand.splice(target,0,card);
-    G.moveSource=null;
-    render();
+function onPointerDown(e){
+  // Only left button or touch
+  if(e.button!==undefined&&e.button!==0)return;
+  const card=e.currentTarget;
+  const idx=parseInt(card.dataset.idx);
+  const rect=card.getBoundingClientRect();
+
+  dragState={
+    idx:idx,
+    startX:e.clientX,
+    startY:e.clientY,
+    offsetX:e.clientX-rect.left,
+    offsetY:e.clientY-rect.top,
+    moved:false,
+    ghost:null,
+    cardEl:card,
+  };
+
+  card.setPointerCapture(e.pointerId);
+  card.addEventListener('pointermove',onPointerMove);
+  card.addEventListener('pointerup',onPointerUp);
+  card.addEventListener('pointercancel',onPointerUp);
+  e.preventDefault();
+}
+
+function onPointerMove(e){
+  if(!dragState)return;
+  const dx=Math.abs(e.clientX-dragState.startX);
+  const dy=Math.abs(e.clientY-dragState.startY);
+
+  // Start dragging only after a small movement threshold
+  if(!dragState.moved&&dx<5&&dy<5)return;
+  if(!dragState.moved){
+    dragState.moved=true;
+    dragState.cardEl.classList.add('dragging');
+    // Create ghost
+    const c=G.players[0].hand[dragState.idx];
+    const g=document.createElement('div');
+    g.className='hand-ghost'+(c.isWild?' wild':(c.isRed?' red':''));
+    g.textContent=cardLabel(c);
+    document.body.appendChild(g);
+    dragState.ghost=g;
   }
+
+  // Move ghost
+  if(dragState.ghost){
+    dragState.ghost.style.left=(e.clientX-dragState.offsetX)+'px';
+    dragState.ghost.style.top=(e.clientY-dragState.offsetY)+'px';
+  }
+
+  // Find which card we're hovering over
+  const hc=document.getElementById('handCards');
+  const cards=hc.querySelectorAll('.hand-card');
+  let hoverIdx=-1;
+  cards.forEach(c=>{
+    c.classList.remove('drag-over');
+    const r=c.getBoundingClientRect();
+    if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
+      hoverIdx=parseInt(c.dataset.idx);
+    }
+  });
+  if(hoverIdx>=0&&hoverIdx!==dragState.idx){
+    cards[hoverIdx].classList.add('drag-over');
+  }
+}
+
+function onPointerUp(e){
+  if(!dragState)return;
+  const card=dragState.cardEl;
+  card.removeEventListener('pointermove',onPointerMove);
+  card.removeEventListener('pointerup',onPointerUp);
+  card.removeEventListener('pointercancel',onPointerUp);
+  card.classList.remove('dragging');
+
+  // Remove ghost
+  if(dragState.ghost)dragState.ghost.remove();
+
+  // Clear drag-over highlights
+  document.querySelectorAll('.hand-card.drag-over').forEach(c=>c.classList.remove('drag-over'));
+
+  if(dragState.moved){
+    // Find drop target
+    const hc=document.getElementById('handCards');
+    const cards=hc.querySelectorAll('.hand-card');
+    let dropIdx=-1;
+    cards.forEach(c=>{
+      const r=c.getBoundingClientRect();
+      if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
+        dropIdx=parseInt(c.dataset.idx);
+      }
+    });
+
+    if(dropIdx>=0&&dropIdx!==dragState.idx){
+      // Swap positions in hand
+      const hand=G.players[0].hand;
+      const fromIdx=dragState.idx;
+      // Adjust for render index vs hand index (they should match)
+      const card_obj=hand.splice(fromIdx,1)[0];
+      let target=dropIdx;
+      if(fromIdx<target)target--;
+      hand.splice(target,0,card_obj);
+      render();
+    }
+  }
+  // If not moved, the click event will fire normally for selection
+  dragState=null;
 }
 
 function renderBuilder(){
