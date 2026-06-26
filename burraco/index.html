@@ -67,6 +67,7 @@ body{background:var(--bg);color:var(--text);font-family:'Georgia',serif;overflow
 .hand-card.selected{border-color:var(--gold);transform:translateY(-4px);}
 .hand-card.wild{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;}
 .hand-card:active{transform:scale(0.93);}
+.hand-card.move-src{border-color:var(--cyan);box-shadow:0 0 8px rgba(0,240,255,0.4);}
 
 /* Actions */
 .actions{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:6px 0;}
@@ -159,7 +160,10 @@ body{background:var(--bg);color:var(--text);font-family:'Georgia',serif;overflow
   <div class="hand-area">
     <div class="hand-label">
       <span>La tua mano</span>
-      <span id="pozzoLabel"></span>
+      <span style="display:flex;gap:6px;align-items:center;">
+        <span id="pozzoLabel"></span>
+        <button class="btn btn-info" style="padding:2px 8px;font-size:0.8em;" onclick="toggleMoveMode()" id="btnMove">↕ Riordina</button>
+      </span>
     </div>
     <div class="hand-cards" id="handCards"></div>
   </div>
@@ -253,6 +257,8 @@ function newGame(){
     phase:'draw', // 'draw','play','discard','ai'
     selectedCards:[],
     builderCards:[],
+    moveMode:false,
+    moveSource:null,
     turnCount:0,
     gameOver:false,
   };
@@ -656,8 +662,13 @@ function render(){
   hc.innerHTML=G.players[0].hand.map((c,i)=>{
     const cls=c.isWild?'hand-card wild':(c.isRed?'hand-card red':'hand-card');
     const sel=G.selectedCards.includes(i)?' selected':'';
-    return `<div class="${cls}${sel}" onclick="toggleHandCard(${i})">${cardLabel(c)}</div>`;
+    const moveSrc=G.moveMode&&G.moveSource===i?' move-src':'';
+    const clickHandler=G.moveMode?`moveCardTo(${i})`:`toggleHandCard(${i})`;
+    return `<div class="${cls}${sel}${moveSrc}" onclick="${clickHandler}">${cardLabel(c)}</div>`;
   }).join('');
+  // Update move button
+  const btnMove=document.getElementById('btnMove');
+  if(btnMove)btnMove.style.background=G.moveMode?'var(--cyan)':'rgba(255,255,255,0.1)';
 
   // Pozzetto label
   document.getElementById('pozzoLabel').innerHTML=G.players[0].pozzetto.length>0?
@@ -677,6 +688,36 @@ function toggleHandCard(idx){
   if(i>=0)G.selectedCards.splice(i,1);
   else G.selectedCards.push(idx);
   render();
+}
+
+function toggleMoveMode(){
+  G.moveMode=!G.moveMode;
+  G.moveSource=null;
+  G.selectedCards=[];
+  if(G.moveMode)showToast('Modalità riordino: tocca una carta da spostare, poi tocca dove inserirla.');
+  render();
+}
+
+function moveCardTo(idx){
+  if(G.moveSource===null){
+    // First tap: select source
+    G.moveSource=idx;
+    render();
+  } else if(G.moveSource===idx){
+    // Tap same card: deselect
+    G.moveSource=null;
+    render();
+  } else {
+    // Move card from moveSource to before idx
+    const hand=G.players[0].hand;
+    const card=hand.splice(G.moveSource,1)[0];
+    // Adjust target index if we removed from before it
+    let target=idx;
+    if(G.moveSource<target)target--;
+    hand.splice(target,0,card);
+    G.moveSource=null;
+    render();
+  }
 }
 
 function renderBuilder(){
