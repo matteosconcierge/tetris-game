@@ -69,7 +69,7 @@ body{background:var(--bg);color:var(--text);font-family:'Georgia',serif;overflow
 .hand-card.wild{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;}
 .hand-card:active{transform:scale(0.93);}
 .hand-card.dragging{opacity:0.4;transform:scale(0.9);}
-.hand-card.drag-over{border-color:var(--cyan);transform:translateY(-2px);}
+.hand-card.gap-before{margin-left:36px !important;transition:margin 0.15s ease-out;}
 .hand-ghost{
   position:fixed;z-index:300;pointer-events:none;width:32px;height:44px;
   border-radius:4px;background:var(--card-bg);color:#222;
@@ -752,19 +752,63 @@ function onPointerMove(e){
     dragState.ghost.style.top=(e.clientY-dragState.offsetY)+'px';
   }
 
-  // Find which card we're hovering over
+  // Find insertion point: which card the pointer is over, and left/right half
   const hc=document.getElementById('handCards');
-  const cards=hc.querySelectorAll('.hand-card');
-  let hoverIdx=-1;
-  cards.forEach(c=>{
-    c.classList.remove('drag-over');
+  const cards=Array.from(hc.querySelectorAll('.hand-card'));
+  let dropIdx=-1; // index in hand array where the card would be inserted before
+
+  for(const c of cards){
     const r=c.getBoundingClientRect();
-    if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
-      hoverIdx=parseInt(c.dataset.idx);
+    const ci=parseInt(c.dataset.idx);
+    if(ci===dragState.idx)continue; // skip the dragged card itself
+    // Check if pointer is over this card's row (y) and within x bounds
+    if(e.clientY>=r.top&&e.clientY<=r.bottom){
+      const mid=r.left+r.width/2;
+      if(e.clientX<r.left){
+        // Pointer is before this card → insert here
+        dropIdx=ci;
+        break;
+      } else if(e.clientX>=r.left&&e.clientX<mid){
+        // Left half → insert before this card
+        dropIdx=ci;
+        break;
+      } else if(e.clientX>=mid&&e.clientX<=r.right){
+        // Right half → insert after this card
+        dropIdx=ci+1;
+        break;
+      }
     }
-  });
-  if(hoverIdx>=0&&hoverIdx!==dragState.idx){
-    cards[hoverIdx].classList.add('drag-over');
+  }
+  // If no card matched but we're past the last card, insert at end
+  if(dropIdx===-1&&cards.length>0){
+    const lastR=cards[cards.length-1].getBoundingClientRect();
+    if(e.clientY>lastR.bottom||(e.clientY>=lastR.top&&e.clientY<=lastR.bottom&&e.clientX>lastR.right)){
+      dropIdx=G.players[0].hand.length;
+    }
+  }
+
+  // Clear previous gaps
+  cards.forEach(c=>c.classList.remove('gap-before'));
+
+  // Open gap at insertion point
+  dragState.dropIdx=dropIdx;
+  if(dropIdx>=0){
+    // The dragged card's original index affects what "insert before" means
+    // After removal, indices shift. We'll handle that on drop.
+    // For now, find the DOM card that currently sits at dropIdx position.
+    // Map: if we remove the dragged card, the card that was at dropIdx stays at dropIdx-1 (if dragIdx<dropIdx)
+    const effectiveDropIdx=dropIdx>dragState.idx?dropIdx-1:dropIdx;
+    // Find the DOM card whose hand index === effectiveDropIdx (after removal)
+    // But DOM still has the dragged card. Simpler: find card with dataIdx === dropIdx, or if dropIdx is at end, gap before last+1
+    if(dropIdx>=G.players[0].hand.length){
+      // Insert at end — gap after last card (add to last card as gap-after effect via margin-right on a pseudo)
+      // Easiest: add gap-before to a non-existent position → add margin-right to last card
+      const last=cards.find(c=>parseInt(c.dataset.idx)===G.players[0].hand.length-1);
+      if(last&&parseInt(last.dataset.idx)!==dragState.idx)last.classList.add('gap-before');
+    } else {
+      const target=cards.find(c=>parseInt(c.dataset.idx)===dropIdx);
+      if(target&&parseInt(target.dataset.idx)!==dragState.idx)target.classList.add('gap-before');
+    }
   }
 }
 
@@ -779,32 +823,17 @@ function onPointerUp(e){
   // Remove ghost
   if(dragState.ghost)dragState.ghost.remove();
 
-  // Clear drag-over highlights
-  document.querySelectorAll('.hand-card.drag-over').forEach(c=>c.classList.remove('drag-over'));
+  // Clear gap highlights
+  document.querySelectorAll('.hand-card.gap-before').forEach(c=>c.classList.remove('gap-before'));
 
-  if(dragState.moved){
-    // Find drop target
-    const hc=document.getElementById('handCards');
-    const cards=hc.querySelectorAll('.hand-card');
-    let dropIdx=-1;
-    cards.forEach(c=>{
-      const r=c.getBoundingClientRect();
-      if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
-        dropIdx=parseInt(c.dataset.idx);
-      }
-    });
-
-    if(dropIdx>=0&&dropIdx!==dragState.idx){
-      // Swap positions in hand
-      const hand=G.players[0].hand;
-      const fromIdx=dragState.idx;
-      // Adjust for render index vs hand index (they should match)
-      const card_obj=hand.splice(fromIdx,1)[0];
-      let target=dropIdx;
-      if(fromIdx<target)target--;
-      hand.splice(target,0,card_obj);
-      render();
-    }
+  if(dragState.moved&&dragState.dropIdx>=0&&dragState.dropIdx!==dragState.idx){
+    const hand=G.players[0].hand;
+    const fromIdx=dragState.idx;
+    const card_obj=hand.splice(fromIdx,1)[0];
+    let target=dragState.dropIdx;
+    if(fromIdx<target)target--;
+    hand.splice(target,0,card_obj);
+    render();
   }
   // If not moved, the click event will fire normally for selection
   dragState=null;
