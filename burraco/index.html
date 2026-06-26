@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Burraco Solitario - Arcade</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d1b2a;--bg2:#1b263b;--felt:#0a4d3a;--felt-dark:#063528;
+  --gold:#ffd700;--accent:#e63946;--cyan:#00f0ff;--green:#39ff14;
+  --card-bg:#fafafa;--text:#fff;--muted:#8899aa;
+  --shadow:0 4px 12px rgba(0,0,0,0.4);
+}
+body{background:var(--bg);color:var(--text);font-family:'Georgia',serif;overflow-x:hidden;min-height:100vh;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+#game{max-width:520px;margin:0 auto;padding:8px;min-height:100vh;display:flex;flex-direction:column;}
+
+/* Header */
+.header{text-align:center;padding:6px 0 4px;}
+.header h1{font-size:1.3em;color:var(--gold);text-shadow:0 0 10px rgba(255,215,0,0.3);letter-spacing:1px;}
+.header .sub{font-size:0.7em;color:var(--muted);}
+
+/* AI areas */
+.ai-area{background:rgba(0,0,0,0.25);border-radius:8px;padding:6px;margin:4px 0;border:1px solid rgba(255,255,255,0.06);}
+.ai-header{display:flex;justify-content:space-between;align-items:center;font-size:0.75em;}
+.ai-name{color:var(--cyan);font-weight:bold;}
+.ai-count{color:var(--muted);}
+.ai-combis{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;max-height:60px;overflow-y:auto;}
+.ai-combi{background:rgba(255,255,255,0.06);border-radius:4px;padding:2px 6px;font-size:0.6em;color:var(--gold);}
+.ai-combi.burraco{border:1px solid var(--gold);}
+
+/* Table */
+.table-area{flex:1;background:var(--felt);border-radius:12px;margin:6px 0;padding:8px;border:2px solid var(--felt-dark);display:flex;flex-direction:column;gap:6px;min-height:120px;}
+.table-section{font-size:0.65em;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.player-combis{display:flex;flex-wrap:wrap;gap:4px;min-height:40px;}
+.combi-card{background:var(--card-bg);color:#222;border-radius:4px;padding:2px 5px;font-size:0.65em;font-weight:600;min-width:20px;text-align:center;}
+.combi-card.red{color:var(--accent);}
+.combi-card.wild{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;}
+.combi-label{font-size:0.55em;color:var(--muted);margin-top:2px;}
+
+/* Center piles */
+.piles{display:flex;justify-content:center;gap:16px;padding:6px 0;}
+.pile{text-align:center;}
+.pile-label{font-size:0.6em;color:var(--muted);margin-bottom:3px;}
+.pile-card{
+  width:36px;height:50px;border-radius:5px;background:var(--card-bg);
+  display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.7em;
+  box-shadow:var(--shadow);cursor:pointer;transition:transform 0.15s;position:relative;
+}
+.pile-card.red{color:var(--accent);}
+.pile-card.back{background:repeating-linear-gradient(45deg,#1a3a5c,#1a3a5c 4px,#0d2540 4px,#0d2540 8px);}
+.pile-card:active{transform:scale(0.95);}
+.pile-count{font-size:0.55em;color:var(--muted);margin-top:2px;}
+
+/* Hand */
+.hand-area{background:rgba(0,0,0,0.3);border-radius:8px;padding:6px;margin:4px 0;}
+.hand-label{font-size:0.6em;color:var(--muted);display:flex;justify-content:space-between;align-items:center;}
+.pozzo-badge{background:var(--accent);color:#fff;border-radius:8px;padding:1px 6px;font-size:0.9em;}
+.hand-cards{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;max-height:120px;overflow-y:auto;}
+.hand-card{
+  width:32px;height:44px;border-radius:4px;background:var(--card-bg);color:#222;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-weight:bold;font-size:0.6em;box-shadow:var(--shadow);cursor:pointer;
+  position:relative;transition:transform 0.15s,border 0.15s;border:2px solid transparent;
+}
+.hand-card.red{color:var(--accent);}
+.hand-card.selected{border-color:var(--gold);transform:translateY(-4px);}
+.hand-card.wild{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;}
+.hand-card:active{transform:scale(0.93);}
+
+/* Actions */
+.actions{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:6px 0;}
+.btn{
+  padding:8px 14px;border:none;border-radius:8px;font-size:0.75em;font-weight:bold;
+  cursor:pointer;transition:all 0.15s;font-family:inherit;
+}
+.btn:active{transform:scale(0.96);}
+.btn-draw{background:var(--cyan);color:#000;}
+.btn-take{background:var(--gold);color:#000;}
+.btn-lay{background:var(--green);color:#000;}
+.btn-discard{background:var(--accent);color:#fff;}
+.btn-close{background:#ff6a00;color:#fff;}
+.btn:disabled{opacity:0.3;cursor:default;}
+.btn-info{background:rgba(255,255,255,0.1);color:var(--muted);font-size:0.65em;}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--bg2);border-radius:12px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto;}
+.modal h2{color:var(--gold);margin-bottom:10px;font-size:1.1em;}
+.modal p,.modal li{font-size:0.8em;line-height:1.6;margin-bottom:6px;color:#ccd;}
+.modal ul{padding-left:16px;margin-bottom:10px;}
+.modal .close{margin-top:10px;width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
+
+/* Combi builder */
+.combi-builder{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-radius:12px 12px 0 0;padding:12px;z-index:50;display:none;max-height:60vh;overflow-y:auto;}
+.combi-builder.show{display:block;}
+.combi-builder h3{color:var(--gold);font-size:0.9em;margin-bottom:8px;}
+.builder-cards{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;min-height:50px;padding:6px;background:rgba(0,0,0,0.2);border-radius:8px;}
+.builder-cards .hand-card{cursor:pointer;}
+.builder-empty{color:var(--muted);font-size:0.7em;padding:12px;text-align:center;}
+.builder-actions{display:flex;gap:6px;}
+.builder-type{font-size:0.7em;color:var(--muted);margin:6px 0;}
+
+/* Toast */
+.toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:var(--bg2);color:var(--text);padding:10px 20px;border-radius:8px;font-size:0.8em;z-index:200;box-shadow:var(--shadow);display:none;border:1px solid var(--gold);}
+.toast.show{display:block;animation:toastIn 0.3s;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+/* Scores */
+.scores{display:flex;gap:6px;justify-content:center;font-size:0.65em;margin:4px 0;}
+.score-box{background:rgba(0,0,0,0.3);border-radius:6px;padding:4px 8px;text-align:center;}
+.score-box .name{color:var(--cyan);}
+.score-box .val{color:var(--gold);font-weight:bold;font-size:1.2em;}
+
+/* End screen */
+.end-screen{text-align:center;padding:20px;}
+.end-screen h2{color:var(--gold);font-size:1.2em;margin-bottom:10px;}
+.end-screen .winner{color:var(--green);font-size:1.1em;margin:10px 0;}
+.play-again{margin-top:14px;padding:12px 24px;background:var(--gold);color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:0.9em;}
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="header">
+    <h1>♠ BURRACO SOLITARIO ♠</h1>
+    <div class="sub">Tu vs 2 AI · 1v1v1</div>
+  </div>
+
+  <div class="scores" id="scores"></div>
+
+  <div class="ai-area" id="ai1Area">
+    <div class="ai-header"><span class="ai-name">🤖 AI Nord</span><span class="ai-count" id="ai1Count"></span></div>
+    <div class="ai-combis" id="ai1Combis"></div>
+  </div>
+
+  <div class="ai-area" id="ai2Area">
+    <div class="ai-header"><span class="ai-name">🤖 AI Est</span><span class="ai-count" id="ai2Count"></span></div>
+    <div class="ai-combis" id="ai2Combis"></div>
+  </div>
+
+  <div class="table-area">
+    <div class="table-section">Le tue combinazioni</div>
+    <div class="player-combis" id="playerCombis"></div>
+    <div class="piles">
+      <div class="pile">
+        <div class="pile-label">Tallone</div>
+        <div class="pile-card back" id="drawPile" onclick="drawCard()">🂠</div>
+        <div class="pile-count" id="drawCount">0</div>
+      </div>
+      <div class="pile">
+        <div class="pile-label">Scarti</div>
+        <div class="pile-card" id="discardTop" onclick="takeDiscard()">—</div>
+        <div class="pile-count" id="discardCount">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hand-area">
+    <div class="hand-label">
+      <span>La tua mano</span>
+      <span id="pozzoLabel"></span>
+    </div>
+    <div class="hand-cards" id="handCards"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-draw" id="btnDraw" onclick="drawCard()">Pesca</button>
+    <button class="btn btn-take" id="btnTake" onclick="takeDiscard()">Prendi scarti</button>
+    <button class="btn btn-lay" id="btnLay" onclick="openBuilder()">Cala</button>
+    <button class="btn btn-discard" id="btnDiscard" onclick="discardSelected()">Scarta</button>
+    <button class="btn btn-close" id="btnClose" onclick="tryClose()">Chiudi</button>
+    <button class="btn btn-info" onclick="showHelp()">?</button>
+  </div>
+</div>
+
+<!-- Combi Builder -->
+<div class="combi-builder" id="combiBuilder">
+  <h3>Crea combinazione</h3>
+  <div class="builder-type" id="builderType">Seleziona carte dalla mano</div>
+  <div class="builder-cards" id="builderCards"></div>
+  <div style="margin-bottom:6px;font-size:0.7em;color:var(--muted);">
+    Tipo: <select id="combiTypeSel" style="background:var(--bg);color:#fff;border:1px solid #555;border-radius:4px;padding:2px;">
+      <option value="auto">Auto</option><option value="tris">Tris/Stessa carta</option><option value="scala">Scala/Stesso seme</option>
+    </select>
+  </div>
+  <div class="builder-actions">
+    <button class="btn btn-lay" onclick="confirmCombi()">Conferma</button>
+    <button class="btn" style="background:#555;color:#fff;" onclick="cancelBuilder()">Annulla</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ====== CARD ENGINE ======
+const SUITS=['♣','♦','♥','♠'];
+const RANKS=['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
+const CARD_VALUES={'3':5,'4':5,'5':5,'6':5,'7':5,'8':10,'9':10,'10':10,'J':10,'Q':10,'K':10,'A':15,'2':20};
+const WILD_RANKS=['2']; // 2 and Jolly are wild
+
+function makeDeck(){
+  const deck=[];
+  let id=0;
+  for(let d=0;d<2;d++){
+    for(const s of SUITS){
+      for(const r of RANKS){
+        deck.push({id:id++,rank:r,suit:s,value:CARD_VALUES[r],isWild:r==='2',isRed:(s==='♥'||s==='♦')});
+      }
+    }
+    deck.push({id:id++,rank:'★',suit:'★',value:30,isWild:true,isJolly:true,isRed:false});
+    deck.push({id:id++,rank:'★',suit:'★',value:30,isWild:true,isJolly:true,isRed:false});
+  }
+  return deck;
+}
+
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+
+function cardLabel(c){
+  if(c.isJolly) return '★';
+  return c.rank+c.suit;
+}
+
+function cardSort(a,b){
+  if(a.isJolly&&!b.isJoly)return 1;
+  if(b.isJolly&&!a.isJolly)return -1;
+  if(a.isJolly&&b.isJolly)return 0;
+  const si=SUITS.indexOf(a.suit),sj=SUITS.indexOf(b.suit);
+  if(si!==sj)return si-sj;
+  return RANKS.indexOf(a.rank)-RANKS.indexOf(b.rank);
+}
+
+// ====== GAME STATE ======
+let G;
+
+function newGame(){
+  const deck=shuffle(makeDeck());
+  G={
+    deck:deck,
+    discard:[],
+    players:[
+      {name:'Tu',isAI:false,hand:[],pozzetto:[],combis:[],hasOpened:false,hasBurraco:false,score:0,pozzettoTaken:false},
+      {name:'AI Nord',isAI:true,hand:[],pozzetto:[],combis:[],hasOpened:false,hasBurraco:false,score:0,pozzettoTaken:false},
+      {name:'AI Est',isAI:true,hand:[],pozzetto:[],combis:[],hasOpened:false,hasBurraco:false,score:0,pozzettoTaken:false},
+    ],
+    current:0,
+    phase:'draw', // 'draw','play','discard','ai'
+    selectedCards:[],
+    builderCards:[],
+    turnCount:0,
+    gameOver:false,
+  };
+  // Deal 11 cards each
+  for(let p=0;p<3;p++){
+    G.players[p].hand=deck.splice(0,11);
+    G.players[p].hand.sort(cardSort);
+    G.players[p].pozzetto=deck.splice(0,11);
+  }
+  // First discard
+  G.discard.push(deck.pop());
+  render();
+  showToast('Nuova partita! Tocca a te. Pesca o prendi gli scarti.');
+}
+
+// ====== PLAYER ACTIONS ======
+function drawCard(){
+  if(G.current!==0||G.phase!=='draw'||G.gameOver)return;
+  if(G.deck.length===0){
+    // Reshuffle discard into deck, keep top
+    const top=G.discard.pop();
+    G.deck=shuffle(G.discard);
+    G.discard=[top];
+    if(G.deck.length===0){showToast('Tallone esaurito!');return;}
+  }
+  const card=G.deck.pop();
+  G.players[0].hand.push(card);
+  G.players[0].hand.sort(cardSort);
+  G.phase='play';
+  render();
+}
+
+function takeDiscard(){
+  if(G.current!==0||G.phase!=='draw'||G.gameOver)return;
+  if(G.discard.length===0)return;
+  G.players[0].hand.push(...G.discard);
+  G.discard=[];
+  G.players[0].hand.sort(cardSort);
+  G.phase='play';
+  render();
+  showToast('Hai preso gli scarti!');
+}
+
+function openBuilder(){
+  if(G.current!==0||G.gameOver)return;
+  if(G.phase==='draw'){showToast('Prima pesca o prendi gli scarti.');return;}
+  G.builderCards=[];
+  document.getElementById('combiBuilder').classList.add('show');
+  renderBuilder();
+}
+
+function cancelBuilder(){
+  document.getElementById('combiBuilder').classList.remove('show');
+  G.builderCards=[];
+}
+
+function toggleBuilderCard(idx){
+  const i=G.builderCards.indexOf(idx);
+  if(i>=0)G.builderCards.splice(i,1);
+  else G.builderCards.push(idx);
+  renderBuilder();
+}
+
+function confirmCombi(){
+  if(G.builderCards.length<3){showToast('Minimo 3 carte.');return;}
+  const cards=G.builderCards.map(i=>G.players[0].hand[i]);
+  const type=document.getElementById('combiTypeSel').value;
+  const result=validateCombi(cards,type);
+  if(!result.valid){showToast(result.msg);return;}
+
+  // Check opening requirement
+  if(!G.players[0].hasOpened){
+    const pts=cards.reduce((s,c)=>s+c.value,0);
+    if(pts<30){showToast('Per aprire servono almeno 30 punti.');return;}
+  }
+
+  // Check if this is a burraco (7+ cards)
+  const isBurraco=cards.length>=7;
+
+  // Add combination
+  G.players[0].combis.push({cards:cards,type:result.type,isBurraco:isBurraco,pure:!cards.some(c=>c.isWild)});
+  if(!G.players[0].hasOpened)G.players[0].hasOpened=true;
+  if(isBurraco)G.players[0].hasBurraco=true;
+
+  // Remove from hand
+  G.builderCards.sort((a,b)=>b-a).forEach(i=>G.players[0].hand.splice(i,1));
+  G.builderCards=[];
+  document.getElementById('combiBuilder').classList.remove('show');
+  render();
+  showToast(`Combinazione calata! ${isBurraco?'BURRACO!':''}`);
+}
+
+function discardSelected(){
+  if(G.current!==0||G.gameOver)return;
+  if(G.phase==='draw'){showToast('Prima pesca o prendi gli scarti.');return;}
+  // Find selected card in hand
+  const sel=G.selectedCards;
+  if(sel.length===0){showToast('Seleziona una carta da scartare.');return;}
+  if(sel.length>1){showToast('Seleziona solo una carta.');return;}
+  const idx=sel[0];
+  const card=G.players[0].hand.splice(idx,1)[0];
+  G.discard.push(card);
+  G.selectedCards=[];
+  G.phase='draw';
+  endTurn();
+}
+
+function tryClose(){
+  if(G.current!==0||G.gameOver)return;
+  const p=G.players[0];
+  if(p.hand.length>0){showToast('Devi esaurire la mano per chiudere.');return;}
+  if(p.pozzetto.length>0){showToast('Devi prima prendere il pozzetto.');return;}
+  if(!p.hasBurraco){showToast('Serve almeno un burraco per chiudere.');return;}
+  // Close!
+  endGame(0);
+}
+
+// ====== TURN MANAGEMENT ======
+function endTurn(){
+  G.turnCount++;
+  // Check if player needs pozzetto
+  const p=G.players[G.current];
+  if(p.hand.length===0&&p.pozzetto.length>0&&!p.pozzettoTaken){
+    p.hand=p.pozzetto;
+    p.pozzetto=[];
+    p.pozzettoTaken=true;
+    p.hand.sort(cardSort);
+    if(G.current===0)showToast('Hai preso il pozzetto!');
+  }
+  // Check if player can close
+  if(p.hand.length===0&&p.pozzetto.length===0&&p.hasBurraco){
+    endGame(G.current);
+    return;
+  }
+
+  G.current=(G.current+1)%3;
+  G.phase=G.current===0?'draw':'ai';
+  render();
+  if(G.current!==0)setTimeout(aiTurn,800);
+}
+
+// ====== AI ======
+function aiTurn(){
+  if(G.gameOver)return;
+  const p=G.players[G.current];
+  const aiName=p.name;
+
+  // Draw or take discard
+  // AI takes discard if it has a matching combi in mind, otherwise draw
+  let tookDiscard=false;
+  if(G.discard.length>0&&Math.random()<0.3){
+    p.hand.push(...G.discard);
+    G.discard=[];
+    tookDiscard=true;
+  } else {
+    if(G.deck.length===0){
+      const top=G.discard.pop();
+      G.deck=shuffle(G.discard);
+      G.discard=[top];
+    }
+    if(G.deck.length>0)p.hand.push(G.deck.pop());
+  }
+  p.hand.sort(cardSort);
+  render();
+
+  setTimeout(()=>{
+    // Try to lay combinations
+    const combis=findAICombis(p);
+    if(combis.length>0){
+      for(const combi of combis){
+        if(!p.hasOpened){
+          const pts=combi.reduce((s,c)=>s+c.value,0);
+          if(pts<30)continue;
+        }
+        const isBurraco=combi.length>=7;
+        p.combis.push({cards:combi,type:combiType(combi),isBurraco:isBurraco,pure:!combi.some(c=>c.isWild)});
+        if(!p.hasOpened)p.hasOpened=true;
+        if(isBurraco)p.hasBurraco=true;
+        // Remove from hand
+        for(const c of combi){
+          const idx=p.hand.findIndex(h=>h.id===c.id);
+          if(idx>=0)p.hand.splice(idx,1);
+        }
+      }
+    }
+
+    // Take pozzetto if hand empty
+    if(p.hand.length===0&&p.pozzetto.length>0&&!p.pozzettoTaken){
+      p.hand=p.pozzetto;
+      p.pozzetto=[];
+      p.pozzettoTaken=true;
+      p.hand.sort(cardSort);
+    }
+
+    // Discard a card (prefer non-wild, lowest value)
+    if(p.hand.length>0){
+      let discardIdx=0;
+      let minVal=999;
+      for(let i=0;i<p.hand.length;i++){
+        if(!p.hand[i].isWild&&p.hand[i].value<minVal){
+          minVal=p.hand[i].value;
+          discardIdx=i;
+        }
+      }
+      const card=p.hand.splice(discardIdx,1)[0];
+      G.discard.push(card);
+    }
+
+    render();
+    setTimeout(endTurn,600);
+  },500);
+}
+
+function findAICombis(p){
+  const hand=[...p.hand];
+  const combis=[];
+  // Try to find tris (same rank)
+  const byRank={};
+  for(const c of hand){
+    if(c.isJolly)continue;
+    if(!byRank[c.rank])byRank[c.rank]=[];
+    byRank[c.rank].push(c);
+  }
+  for(const rank in byRank){
+    const group=byRank[rank];
+    if(group.length>=3){
+      // Add wilds if available
+      const wilds=hand.filter(c=>c.isWild);
+      const total=[...group];
+      // Don't add more wilds than natural cards
+      const maxWilds=Math.min(wilds.length,group.length);
+      // Only add wilds if it makes a burraco (7+)
+      if(total.length+wilds.length>=7){
+        total.push(...wilds.slice(0,Math.min(wilds.length,7-total.length)));
+      }
+      if(total.length>=3)combis.push(total);
+    }
+  }
+  // Try runs (same suit, consecutive)
+  const bySuit={};
+  for(const c of hand){
+    if(c.isJolly)continue;
+    if(!bySuit[c.suit])bySuit[c.suit]=[];
+    bySuit[c.suit].push(c);
+  }
+  for(const suit in bySuit){
+    const cards=bySuit[suit].sort((a,b)=>RANKS.indexOf(a.rank)-RANKS.indexOf(b.rank));
+    // Find longest consecutive run
+    let run=[cards[0]];
+    for(let i=1;i<cards.length;i++){
+      if(RANKS.indexOf(cards[i].rank)===RANKS.indexOf(cards[i-1].rank)+1){
+        run.push(cards[i]);
+      } else {
+        if(run.length>=3)combis.push([...run]);
+        run=[cards[i]];
+      }
+    }
+    if(run.length>=3)combis.push([...run]);
+  }
+
+  // Return best combi (first one found, prefer longer)
+  combis.sort((a,b)=>b.length-a.length);
+  // Only return one combi per turn to keep AI simple
+  return combis.length>0?[combis[0]]:[];
+}
+
+function combiType(cards){
+  // Check if all same rank
+  const nonWild=cards.filter(c=>!c.isWild);
+  if(nonWild.every(c=>c.rank===nonWild[0].rank))return'tris';
+  return'scala';
+}
+
+// ====== VALIDATION ======
+function validateCombi(cards,typeHint){
+  if(cards.length<3)return{valid:false,msg:'Minimo 3 carte.'};
+  const nonWild=cards.filter(c=>!c.isWild);
+  const wildCount=cards.length-nonWild.length;
+  if(nonWild.length===0)return{valid:false,msg:'Servono carte naturali.'};
+  if(wildCount>nonWild.length)return{valid:false,msg:'Troppi jolly/due.'};
+
+  // Check tris (same rank)
+  const allSameRank=nonWild.every(c=>c.rank===nonWild[0].rank);
+  if(allSameRank&&(typeHint==='auto'||typeHint==='tris')){
+    return{valid:true,type:'tris'};
+  }
+
+  // Check scala (same suit, consecutive)
+  const allSameSuit=nonWild.every(c=>c.suit===nonWild[0].suit);
+  if(allSameSuit&&(typeHint==='auto'||typeHint==='scala')){
+    // Check consecutive (account for wilds filling gaps)
+    const sortedNonWild=nonWild.sort((a,b)=>RANKS.indexOf(a.rank)-RANKS.indexOf(b.rank));
+    // Count gaps
+    let gaps=0;
+    for(let i=1;i<sortedNonWild.length;i++){
+      const diff=RANKS.indexOf(sortedNonWild[i].rank)-RANKS.indexOf(sortedNonWild[i-1].rank);
+      if(diff<=0)return{valid:false,msg:'Carte non consecutive nello stesso seme.'};
+      gaps+=diff-1;
+    }
+    // Wilds can fill gaps + ends
+    if(wildCount>gaps+2)return{valid:false,msg:'Troppi jolly per la scala.'};
+    return{valid:true,type:'scala'};
+  }
+
+  if(typeHint==='auto'){
+    if(allSameRank)return{valid:true,type:'tris'};
+    if(allSameSuit)return{valid:true,type:'scala'};
+  }
+  return{valid:false,msg:'Combinazione non valida. Stesso valore (tris) o stesso seme consecutivo (scala).'};
+}
+
+// ====== SCORING ======
+function calculateScore(playerIdx){
+  const p=G.players[playerIdx];
+  let score=0;
+  // Points from combinations on table
+  for(const combi of p.combis){
+    for(const c of combi.cards)score+=c.value;
+  }
+  // Subtract points from hand
+  for(const c of p.hand)score-=c.value;
+  // Subtract pozzetto if not taken
+  if(p.pozzetto.length>0){
+    for(const c of p.pozzetto)score-=c.value;
+  }
+  // Bonus for closing
+  if(G.gameOver&&G.closer===playerIdx)score+=100;
+  return score;
+}
+
+function endGame(closerIdx){
+  G.gameOver=true;
+  G.closer=closerIdx;
+  const scores=G.players.map((p,i)=>calculateScore(i));
+  G.players.forEach((p,i)=>p.score=scores[i]);
+  render();
+  showEndScreen();
+}
+
+function showEndScreen(){
+  const sorted=G.players.map((p,i)=>({name:p.name,score:p.score,idx:i})).sort((a,b)=>b.score-a.score);
+  const winner=sorted[0];
+  let html=`<div class="end-screen"><h2>🏁 Partita finita!</h2>`;
+  html+=`<div class="winner">🏆 Vincitore: ${winner.name} (${winner.score} pt)</div>`;
+  html+=`<div style="margin:10px 0;">`;
+  for(const s of sorted){
+    html+=`<div style="margin:4px 0;font-size:0.85em;">${s.name}: <strong style="color:var(--gold);">${s.score} pt</strong></div>`;
+  }
+  html+=`</div>`;
+  html+=`<button class="play-again" onclick="newGame();closeModal()">Gioca ancora</button></div>`;
+  document.getElementById('modalContent').innerHTML=html;
+  document.getElementById('modalBg').classList.add('show');
+}
+
+// ====== RENDER ======
+function render(){
+  if(!G)return;
+  // Scores
+  const sc=document.getElementById('scores');
+  sc.innerHTML=G.players.map((p,i)=>
+    `<div class="score-box"><div class="name">${p.name}</div><div class="val">${p.combis.reduce((s,c)=>s+c.cards.reduce((ss,cc)=>ss+cc.value,0),0)}</div></div>`
+  ).join('');
+
+  // AI areas
+  for(let i=1;i<3;i++){
+    const p=G.players[i];
+    document.getElementById(`ai${i}Count`).textContent=`${p.hand.length} carte${p.pozzetto.length>0?' + pozzetto':''}${p.hasBurraco?' ✓B':''}`;
+    const cc=document.getElementById(`ai${i}Combis`);
+    cc.innerHTML=p.combis.map(c=>
+      `<div class="ai-combi${c.isBurraco?' burraco':''}">${c.type==='tris'?'Tris':'Scala'} ${c.cards.length} carte${c.isBurraco?' ⭐':''}</div>`
+    ).join('');
+    // Highlight current player
+    document.getElementById(`ai${i}Area`).style.borderColor=G.current===i?'var(--gold)':'rgba(255,255,255,0.06)';
+  }
+
+  // Player combinations
+  const pc=document.getElementById('playerCombis');
+  pc.innerHTML=G.players[0].combis.map(c=>{
+    const cards=c.cards.map(card=>{
+      const cls=card.isWild?'combi-card wild':(card.isRed?'combi-card red':'combi-card');
+      return `<div class="${cls}">${cardLabel(card)}</div>`;
+    }).join('');
+    const lbl=c.isBurraco?`<div class="combi-label">${c.type} · ${c.cards.length} carte · BURRACO ${c.pure?'PURO':''}</div>`:`<div class="combi-label">${c.type} · ${c.cards.length} carte</div>`;
+    return `<div style="margin-right:8px;">${cards}${lbl}</div>`;
+  }).join('');
+
+  // Piles
+  document.getElementById('drawCount').textContent=G.deck.length;
+  document.getElementById('discardCount').textContent=G.discard.length;
+  const dt=document.getElementById('discardTop');
+  if(G.discard.length>0){
+    const top=G.discard[G.discard.length-1];
+    dt.textContent=cardLabel(top);
+    dt.className='pile-card'+(top.isRed?' red':'')+(top.isWild?' wild':'');
+  } else {
+    dt.textContent='—';dt.className='pile-card';
+  }
+
+  // Hand
+  const hc=document.getElementById('handCards');
+  hc.innerHTML=G.players[0].hand.map((c,i)=>{
+    const cls=c.isWild?'hand-card wild':(c.isRed?'hand-card red':'hand-card');
+    const sel=G.selectedCards.includes(i)?' selected':'';
+    return `<div class="${cls}${sel}" onclick="toggleHandCard(${i})">${cardLabel(c)}</div>`;
+  }).join('');
+
+  // Pozzetto label
+  document.getElementById('pozzoLabel').innerHTML=G.players[0].pozzetto.length>0?
+    `<span class="pozzo-badge">Pozzetto: ${G.players[0].pozzetto.length} carte</span>`:'';
+
+  // Buttons
+  const isMyTurn=G.current===0&&!G.gameOver;
+  document.getElementById('btnDraw').disabled=!isMyTurn||G.phase!=='draw';
+  document.getElementById('btnTake').disabled=!isMyTurn||G.phase!=='draw'||G.discard.length===0;
+  document.getElementById('btnLay').disabled=!isMyTurn||G.phase==='draw';
+  document.getElementById('btnDiscard').disabled=!isMyTurn||G.phase==='draw';
+  document.getElementById('btnClose').disabled=!isMyTurn||G.players[0].hand.length>0||G.players[0].pozzetto.length>0||!G.players[0].hasBurraco;
+}
+
+function toggleHandCard(idx){
+  const i=G.selectedCards.indexOf(idx);
+  if(i>=0)G.selectedCards.splice(i,1);
+  else G.selectedCards.push(idx);
+  render();
+}
+
+function renderBuilder(){
+  const bc=document.getElementById('builderCards');
+  if(G.builderCards.length===0){
+    bc.innerHTML='<div class="builder-empty">Tocca le carte della mano per selezionarle</div>';
+  } else {
+    bc.innerHTML=G.builderCards.map(i=>{
+      const c=G.players[0].hand[i];
+      const cls=c.isWild?'hand-card wild':(c.isRed?'hand-card red':'hand-card');
+      return `<div class="${cls}" onclick="toggleBuilderCard(${i})">${cardLabel(c)}</div>`;
+    }).join('');
+  }
+  // Also show hand cards in builder context
+  const typeEl=document.getElementById('builderType');
+  if(G.builderCards.length>0){
+    const cards=G.builderCards.map(i=>G.players[0].hand[i]);
+    const nonWild=cards.filter(c=>!c.isWild);
+    const allSameRank=nonWild.length>0&&nonWild.every(c=>c.rank===nonWild[0].rank);
+    const allSameSuit=nonWild.length>0&&nonWild.every(c=>c.suit===nonWild[0].suit);
+    typeEl.textContent=`${cards.length} carte · ${allSameRank?'Tris possibile':allSameSuit?'Scala possibile':'Tipo misto'}`;
+  }
+}
+
+// ====== UI HELPERS ======
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function showModal(html){
+  document.getElementById('modalContent').innerHTML=html;
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('modalBg').classList.remove('show');
+}
+
+function showHelp(){
+  showModal(`
+    <h2>Come si gioca</h2>
+    <p><strong>Obiettivo:</strong> Totalizzare più punti formando combinazioni. Serve almeno un "burraco" (7+ carte in una combinazione) per chiudere.</p>
+    <ul>
+      <li><strong>Pesca:</strong> 1 carta dal tallone OPPURE prendi tutti gli scarti</li>
+      <li><strong>Cala:</strong> Forma combinazioni di 3+ carte:
+        <ul>
+          <li><strong>Tris:</strong> stesso valore, semi diversi</li>
+          <li><strong>Scala:</strong> stesso seme, valori consecutivi</li>
+        </ul>
+      </li>
+      <li><strong>Scarta:</strong> 1 carta per finire il turno</li>
+      <li><strong>Pozzetto:</strong> quando finisci le carte in mano, prendi il pozzetto (11 carte)</li>
+      <li><strong>Chiudi:</strong> finisci mano + pozzetto con almeno un burraco</li>
+    </ul>
+    <p><strong>Jolly (★) e 2:</strong> sono wild, valgono 20-30 pt. Massimo 1 wild per ogni 2 carte naturali.</p>
+    <p><strong>Apertura:</strong> la prima combinazione deve totalizzare almeno 30 punti.</p>
+    <p><strong>Punteggio carte:</strong> Jolly=30, 2=20, A=15, 8-K=10, 3-7=5</p>
+    <button class="close" onclick="closeModal()">Chiudi</button>
+  `);
+}
+
+// ====== INIT ======
+newGame();
+</script>
+</body>
+</html>
