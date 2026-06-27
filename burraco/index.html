@@ -695,6 +695,11 @@ function render(){
   document.getElementById('btnLay').disabled=!isMyTurn||G.phase==='draw';
   document.getElementById('btnDiscard').disabled=!isMyTurn||G.phase==='draw';
   document.getElementById('btnClose').disabled=!isMyTurn||G.players[0].hand.length>0||G.players[0].pozzetto.length>0||!G.players[0].hasBurraco;
+
+  // Update builder panel if open
+  if(document.getElementById('combiBuilder').classList.contains('show')){
+    renderBuilder();
+  }
 }
 
 function toggleHandCard(idx){
@@ -708,6 +713,7 @@ function toggleHandCard(idx){
 let dragState=null;
 
 function attachDragHandlers(container){
+  if(document.getElementById('combiBuilder').classList.contains('show'))return; // skip drag when builder is open
   const cards=container.querySelectorAll('.hand-card');
   cards.forEach(card=>{
     card.addEventListener('pointerdown',onPointerDown);
