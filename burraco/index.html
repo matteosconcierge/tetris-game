@@ -325,7 +325,7 @@ function toggleBuilderCard(idx){
   const i=G.builderCards.indexOf(idx);
   if(i>=0)G.builderCards.splice(i,1);
   else G.builderCards.push(idx);
-  renderBuilder();
+  render();
 }
 
 function confirmCombi(){
@@ -665,11 +665,23 @@ function render(){
 
   // Hand
   const hc=document.getElementById('handCards');
+  const builderOpen=document.getElementById('combiBuilder').classList.contains('show');
   hc.innerHTML=G.players[0].hand.map((c,i)=>{
     const cls=c.isWild?'hand-card wild':(c.isRed?'hand-card red':'hand-card');
-    const sel=G.selectedCards.includes(i)?' selected':'';
-    return `<div class="${cls}${sel}" data-idx="${i}" onclick="toggleHandCard(${i})">${cardLabel(c)}</div>`;
+    const sel=builderOpen
+      ?(G.builderCards.includes(i)?' selected':'')
+      :(G.selectedCards.includes(i)?' selected':'');
+    const handler=builderOpen
+      ?`toggleBuilderCard(${i})`
+      :`toggleHandCard(${i})`;
+    return `<div class="${cls}${sel}" data-idx="${i}" onclick="${handler}">${cardLabel(c)}</div>`;
   }).join('');
+  if(builderOpen){
+    // Scroll the hand cards into view above the builder panel
+    hc.style.maxHeight='200px';
+  } else {
+    hc.style.maxHeight='';
+  }
   attachDragHandlers(hc);
 
   // Pozzetto label
