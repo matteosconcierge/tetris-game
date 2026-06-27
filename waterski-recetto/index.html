@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recetto PRO 2026 — Slalom Reference</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0a0e1a;--surface:#121828;--surface2:#1a2340;--accent:#00d4ff;--accent2:#ff6a00;
+  --gold:#ffd700;--green:#39ff14;--text:#e8eef5;--muted:#6a7a99;--border:#1e2d4a;
+}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;-webkit-text-size-adjust:100%;}
+.header{text-align:center;padding:20px 16px 12px;background:linear-gradient(180deg,#0d1530,#0a0e1a);}
+.header h1{font-size:1.3em;font-weight:800;letter-spacing:-0.5px;}
+.header .sub{font-size:0.85em;color:var(--muted);margin-top:4px;}
+.header .badge{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:12px;background:rgba(0,212,255,0.12);color:var(--accent);font-size:0.75em;font-weight:600;}
+.search-box{position:sticky;top:0;z-index:20;padding:10px 12px;background:rgba(10,14,26,0.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+.search-box input{width:100%;padding:11px 14px 11px 40px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:1em;outline:none;}
+.search-box input:focus{border-color:var(--accent);}
+.search-box .icon{position:absolute;left:24px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1.1em;}
+.tabs{display:flex;gap:6px;padding:8px 12px;overflow-x:auto;}
+.tab{padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:0.85em;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent);}
+.tab:hover:not(.active){color:var(--text);}
+.athletes{padding:8px 12px 60px;}
+.athlete-card{background:var(--surface);border-radius:12px;padding:14px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
+.athlete-card:active{transform:scale(0.985);}
+.athlete-card.expanded{background:var(--surface2);}
+.ac-top{display:flex;align-items:center;gap:10px;}
+.ac-flag{font-size:1.5em;flex-shrink:0;}
+.ac-info{flex:1;min-width:0;}
+.ac-name{font-weight:700;font-size:0.95em;}
+.ac-country{font-size:0.75em;color:var(--muted);}
+.ac-div{flex-shrink:0;font-size:0.65em;font-weight:700;padding:3px 8px;border-radius:8px;text-transform:uppercase;}
+.ac-div.men{background:rgba(0,212,255,0.15);color:var(--accent);}
+.ac-div.women{background:rgba(255,106,0,0.15);color:var(--accent2);}
+.ac-rank{flex-shrink:0;text-align:right;font-size:0.75em;color:var(--muted);}
+.ac-rank .pts{font-weight:700;color:var(--gold);font-size:1em;}
+.ac-details{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.athlete-card.expanded .ac-details{display:block;}
+.event-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+.event-row:last-child{border-bottom:none;}
+.event-name{flex:1;font-size:0.8em;}
+.event-score{font-size:0.8em;font-weight:600;font-family:monospace;}
+.event-place{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7em;font-weight:700;flex-shrink:0;}
+.place-1{background:rgba(255,215,0,0.18);color:var(--gold);}
+.place-2{background:rgba(192,192,200,0.15);color:#c0c0c8;}
+.place-3{background:rgba(205,127,50,0.15);color:#cd7f32;}
+.place-other{background:rgba(100,120,140,0.1);color:var(--muted);}
+.event-dns{color:var(--muted);font-size:0.7em;font-style:italic;}
+.no-data{color:var(--muted);font-size:0.8em;font-style:italic;padding:8px 0;}
+.season-pts{text-align:center;margin-top:10px;padding:8px;border-radius:8px;background:rgba(255,215,0,0.07);}
+.season-pts .label{font-size:0.7em;color:var(--muted);}
+.season-pts .val{font-size:1.4em;font-weight:800;color:var(--gold);}
+.footer{text-align:center;padding:16px;color:var(--muted);font-size:0.7em;}
+.empty{padding:6px;text-align:center;color:var(--muted);font-size:0.85em;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏌️ Recetto PRO 2026</h1>
+  <div class="sub">Waterski Pro Tour · Slalom Reference</div>
+  <div class="badge">July 2–5 · Centro Federale di Recetto, Italy</div>
+</div>
+
+<div class="search-box">
+  <span class="icon">🔍</span>
+  <input type="text" id="search" placeholder="Search skier name..." autocomplete="off">
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-filter="all" onclick="setTab('all')">All</div>
+  <div class="tab" data-filter="men" onclick="setTab('men')">Men's Slalom</div>
+  <div class="tab" data-filter="women" onclick="setTab('women')">Women's Slalom</div>
+</div>
+
+<div class="athletes" id="list"></div>
+
+<div class="footer">
+  Data compiled from IWWF EMS, Waterski Pro Tour, and event results · June 2026
+</div>
+
+<script>
+const FLAGS = {
+  ITA:'🇮🇹',GBR:'🇬🇧',USA:'🇺🇸',CAN:'🇨🇦',FRA:'🇫🇷',MAR:'🇲🇦',SWE:'🇸🇪',AUT:'🇦🇹',
+  SUI:'🇨🇭',NED:'🇳🇱',DEN:'🇩🇰',CHI:'🇨🇱',AUS:'🇦🇺',PER:'🇵🇪',GER:'🇩🇪',CZE:'🇨🇿',
+  MON:'🇲🇨',ARG:'🇦🇷',CHN:'🇨🇳'
+};
+
+// 2026 Pro Tour slalom events
+const EVENTS = [
+  { key:'swiss', name:'Swiss Pro Slalom', date:'May 3', location:'Florida, USA' },
+  { key:'masters', name:'Masters', date:'May 24-26', location:'Callaway Gardens, USA' },
+  { key:'monaco', name:'Monaco Waterski Cup', date:'Jun 12-14', location:'Monaco' },
+  { key:'royal', name:'Royal Nautique Pro', date:'Jun 28-29', location:'Lacanau, FRA' },
+  { key:'recetto', name:'Recetto PRO', date:'Jul 2-5', location:'Recetto, ITA' },
+];
+
+const athletes = [
+  // ===== PRO MEN'S SLALOM =====
+  { name:'Charlie Ross', country:'CAN', div:'men', seasonPts:'— (1st overall)',
+    results:{ swiss:{place:1,score:'6.00 @ 10.25m'}, masters:{place:3,score:'—'}, monaco:{place:1,score:'1.00 @ 9.75m'} } },
+  { name:'Nate Smith', country:'USA', div:'men', seasonPts:'— (2nd overall)',
+    results:{ swiss:{place:2,score:'4.50 @ 10.25m'}, monaco:{place:'DNF',score:'Did not advance'} } },
+  { name:'Freddie Winter', country:'GBR', div:'men', seasonPts:'— (3rd overall)',
+    results:{ swiss:{place:5,score:'3.50 @ 10.25m'}, masters:{place:1,score:'—'}, monaco:{place:3,score:'3.50 @ 10.25m'} } },
+  { name:'Dane Mechler', country:'USA', div:'men', seasonPts:'— (4th overall)',
+    results:{ monaco:{place:5,score:'3.50 @ 10.25m'} } },
+  { name:'William Asher', country:'GBR', div:'men', seasonPts:'',
+    results:{ swiss:{place:6,score:'3.00 @ 10.25m'}, monaco:{place:4,score:'3.50 @ 10.25m'} } },
+  { name:'Thomas Degasperi', country:'ITA', div:'men', seasonPts:'',
+    results:{ swiss:{place:16,score:'Did not run 10.25m'}, monaco:{place:8,score:'6.00 @ 10.75m'} } },
+  { name:'Sacha Descuns', country:'FRA', div:'men', seasonPts:'',
+    results:{ monaco:{place:2,score:'5.00 @ 10.25m'} } },
+  { name:'Brando Caruso', country:'ITA', div:'men', seasonPts:'',
+    results:{} },
+  { name:'Carlo Allais', country:'ITA', div:'men', seasonPts:'',
+    results:{} },
+  { name:'Francesco Caldarola', country:'ITA', div:'men', seasonPts:'', results:{} },
+  { name:'Leo Cederquist', country:'SWE', div:'men', seasonPts:'', results:{} },
+  { name:'Arron Davies', country:'GBR', div:'men', seasonPts:'',
+    results:{ monaco:{place:14,score:'2.50 @ 10.75m'} } },
+  { name:'Carter Eaton', country:'USA', div:'men', seasonPts:'', results:{} },
+  { name:'Luca Graham', country:'ITA', div:'men', seasonPts:'', results:{} },
+  { name:'Thomas Gustafson', country:'SWE', div:'men', seasonPts:'', results:{} },
+  { name:'Robert Hazelwood', country:'GBR', div:'men', seasonPts:'',
+    results:{ monaco:{place:9,score:'0.50 @ 10.25m'} } },
+  { name:'Steven Island', country:'USA', div:'men', seasonPts:'',
+    results:{ monaco:{place:13,score:'5.50 @ 10.75m'} } },
+  { name:'Dominic Kuhn', country:'AUT', div:'men', seasonPts:'', results:{} },
+  { name:'Kamil Belmrah', country:'MAR', div:'men', seasonPts:'',
+    results:{ monaco:{place:16,score:'3.00 @ 10.75m'} } },
+  { name:'Cole McCormick', country:'CAN', div:'men', seasonPts:'',
+    results:{ masters:{place:2,score:'—'}, monaco:{place:11,score:'DNS'} } },
+  { name:'Jonathan Travers', country:'USA', div:'men', seasonPts:'',
+    results:{ monaco:{place:6,score:'3.00 @ 10.25m'} } },
+  { name:'Thibaut Dailland', country:'FRA', div:'men', seasonPts:'',
+    results:{ monaco:{place:7,score:'2.50 @ 10.25m'} } },
+  { name:'Matteo Luzzeri', country:'ITA', div:'men', seasonPts:'',
+    results:{ monaco:{place:10,score:'3.50 @ 10.75m'} } },
+  { name:'Nikolaus Attensam', country:'AUT', div:'men', seasonPts:'',
+    results:{ monaco:{place:12,score:'4.50 @ 10.75m'} } },
+  { name:'Florian Parth', country:'ITA', div:'men', seasonPts:'',
+    results:{ monaco:{place:14,score:'5.00 @ 10.75m'} } },
+  { name:'Vincenzo Marino', country:'ITA', div:'men', seasonPts:'',
+    results:{ monaco:{place:17,score:'3.50 @ 10.75m'} } },
+  { name:'Gustavo Kretschmer', country:'CHI', div:'men', seasonPts:'',
+    results:{ monaco:{place:18,score:'2.50 @ 10.75m'} } },
+
+  // ===== PRO WOMEN'S SLALOM =====
+  { name:'Jaimee Bull', country:'CAN', div:'women', seasonPts:'— (1st overall)',
+    results:{ swiss:{place:2,score:'4.00 @ 10.75m'}, masters:{place:2,score:'—'}, monaco:{place:1,score:'3.00 @ 10.75m (runoff win)'} } },
+  { name:'Regina Jaquess', country:'USA', div:'women', seasonPts:'— (2nd overall)',
+    results:{ swiss:{place:1,score:'1.50 @ 10.25m'}, masters:{place:1,score:'—'} } },
+  { name:'Allie Nicholson', country:'USA', div:'women', seasonPts:'— (3rd overall)',
+    results:{ monaco:{place:3,score:'3.00 @ 10.75m'} } },
+  { name:'Trinidad Espinal', country:'CHI', div:'women', seasonPts:'',
+    results:{ monaco:{place:2,score:'3.00 @ 10.75m'} } },
+  { name:'Neilly Ross', country:'CAN', div:'women', seasonPts:'',
+    results:{ monaco:{place:4,score:'2.00 @ 10.75m'} } },
+  { name:'Alice Bagnoli', country:'ITA', div:'women', seasonPts:'',
+    results:{ monaco:{place:5,score:'5.00 @ 11.25m'} } },
+  { name:'Elizabeth Montavon', country:'USA', div:'women', seasonPts:'',
+    results:{ monaco:{place:6,score:'4.50 @ 11.25m'} } },
+  { name:'Alexandra Garcia', country:'USA', div:'women', seasonPts:'',
+    results:{ monaco:{place:7,score:'3.00 @ 11.25m'} } },
+  { name:'Sade Ferguson', country:'AUS', div:'women', seasonPts:'',
+    results:{ monaco:{place:8,score:'3.00 @ 11.25m'} } },
+  { name:'Kennedy Hansen', country:'USA', div:'women', seasonPts:'',
+    results:{ monaco:{place:9,score:'5.50 @ 11.25m'} } },
+  { name:'Annemarie Wroblewski', country:'USA', div:'women', seasonPts:'',
+    results:{ monaco:{place:10,score:'3.50 @ 11.25m'} } },
+  { name:'Illana Bischofberger', country:'FRA', div:'women', seasonPts:'',
+    results:{ monaco:{place:11,score:'3.00 @ 11.25m'} } },
+  { name:'Daniela Kretschmer', country:'CHI', div:'women', seasonPts:'',
+    results:{ monaco:{place:11,score:'3.00 @ 11.25m'} } },
+  { name:'Katerina Vrabcova', country:'CZE', div:'women', seasonPts:'',
+    results:{ monaco:{place:11,score:'3.00 @ 11.25m'} } },
+  { name:'Giannina Bonnemann Mechler', country:'GER', div:'women', seasonPts:'',
+    results:{ monaco:{place:14,score:'3.00 @ 11.25m'} } },
+  { name:'Beatrice Ianni', country:'ITA', div:'women', seasonPts:'',
+    results:{ monaco:{place:14,score:'3.00 @ 11.25m'} } },
+  { name:'Belinda Boekee', country:'NED', div:'women', seasonPts:'', results:{} },
+  { name:'Camilla Gioiello', country:'ITA', div:'women', seasonPts:'', results:{} },
+  { name:'Alice Gut', country:'SUI', div:'women', seasonPts:'', results:{} },
+  { name:'Maise Jacobsen', country:'DEN', div:'women', seasonPts:'', results:{} },
+  { name:'Valerie Jaquier', country:'SUI', div:'women', seasonPts:'', results:{} },
+  { name:'Cristhiana De Osma', country:'PER', div:'women', seasonPts:'', results:{} },
+];
+
+let currentTab = 'all';
+let searchTerm = '';
+
+function placeClass(place) {
+  if (place === 1 || place === '1') return 'place-1';
+  if (place === 2 || place === '2') return 'place-2';
+  if (place === 3 || place === '3') return 'place-3';
+  return 'place-other';
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+  const filtered = athletes.filter(a => {
+    if (currentTab !== 'all' && a.div !== currentTab) return false;
+    if (searchTerm && !a.name.toLowerCase().includes(searchTerm) && !a.country.toLowerCase().includes(searchTerm)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">No skiers found.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map((a, idx) => {
+    const flag = FLAGS[a.country] || '🏳️';
+    const divLabel = a.div === 'men' ? "Men" : "Women";
+    const eventRows = EVENTS.map(ev => {
+      const r = a.results[ev.key];
+      if (!r) return '';
+      let placeHtml = '';
+      if (r.place === 'DNS' || r.place === 'DNF') {
+        placeHtml = `<span class="event-dns">${r.place}</span>`;
+      } else {
+        const cls = placeClass(r.place);
+        placeHtml = `<div class="event-place ${cls}">${r.place}</div>`;
+      }
+      return `<div class="event-row">
+        <div class="event-name"><strong>${ev.name}</strong><br><span style="color:var(--muted);font-size:0.7em">${ev.date} · ${ev.location}</span></div>
+        <div class="event-score">${r.score}</div>
+        ${placeHtml}
+      </div>`;
+    }).join('');
+
+    const details = eventRows || '<div class="no-data">No 2026 pro event results yet for this skier.</div>';
+    const ptsHtml = a.seasonPts ? `<div class="season-pts"><div class="label">2026 Season Standing</div><div class="val">${a.seasonPts}</div></div>` : '';
+
+    return `<div class="athlete-card" onclick="toggleCard(this)">
+      <div class="ac-top">
+        <div class="ac-flag">${flag}</div>
+        <div class="ac-info">
+          <div class="ac-name">${a.name}</div>
+          <div class="ac-country">${a.country}</div>
+        </div>
+        <div class="ac-div ${a.div}">${divLabel}</div>
+      </div>
+      <div class="ac-details">
+        ${details}
+        ${ptsHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCard(el) {
+  el.classList.toggle('expanded');
+}
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-filter="${tab}"]`).classList.add('active');
+  renderList();
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  searchTerm = e.target.value.toLowerCase().trim();
+  renderList();
+});
+
+renderList();
+</script>
+</body>
+</html>
