@@ -50,6 +50,7 @@ body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,
 .place-other{background:rgba(100,120,140,0.1);color:var(--muted);}
 .event-dns{color:var(--muted);font-size:0.7em;font-style:italic;}
 .no-data{color:var(--muted);font-size:0.8em;font-style:italic;padding:8px 0;}
+.ac-bio{font-size:0.8em;line-height:1.5;color:#b8c4d8;padding:8px 10px;border-radius:8px;background:rgba(0,212,255,0.05);margin-bottom:8px;border-left:3px solid var(--accent);}
 .season-pts{text-align:center;margin-top:10px;padding:8px;border-radius:8px;background:rgba(255,215,0,0.07);}
 .season-pts .label{font-size:0.7em;color:var(--muted);}
 .season-pts .val{font-size:1.4em;font-weight:800;color:var(--gold);}
@@ -102,20 +103,26 @@ const EVENTS = [
 const athletes = [
   // ===== PRO MEN'S SLALOM =====
   { name:'Charlie Ross', country:'CAN', div:'men', seasonPts:'1st overall',
+    bio:'Age 20. Born Aug 2, 2005 in Winter Garden, FL. From Minett, Ontario (Muskoka). Son of Drew Ross, pro slalom coach. Sister Neilly Ross is a multi-time world champion in tricks. Student-athlete at Rollins College. NCWSA Male Athlete of the Year 2026. Youngest skier ever to run 41-off and 39.5-off in international competition. U21 World Record holder (2.00 @ 9.75m, pending). Defended his Moomba Masters title in 2026. Known for a technically precise, high-finesse style.',
     results:{ moomba:{place:1,score:'1st'}, swiss:{place:1,score:'6.00 @ 10.25m'}, masters:{place:3,score:'—'}, morocco:{place:2,score:'5.00 @ 10.25m'}, monaco:{place:1,score:'1.00 @ 9.75m'} } },
   { name:'Nate Smith', country:'USA', div:'men', seasonPts:'2nd overall',
+    bio:'Age 35. Born Nov 29, 1990 in McCordsville, Indiana. Started skiing at age 2, competing by age 8. World Record holder: 2.5 buoys @ 9.75m (43 off), a mark that has stood for over a decade. 2025 IWWF World Slalom Champion. Multi-time Masters champion. Considered the most technically efficient slalom skier in history with an effortlessly quiet style. Turned pro in 2010.',
     results:{ swiss:{place:2,score:'4.50 @ 10.25m'}, monaco:{place:'DNF',score:'Did not advance'} } },
   { name:'Freddie Winter', country:'GBR', div:'men', seasonPts:'3rd overall',
+    bio:'Age 36. Born in Tooting, South London. Now resides in Florida. 2017 IWWF World Slalom Champion. 2020 Waterski Pro Tour Champion. Known for explosive, athletic skiing and intense rivalry with Nate Smith — often the only skier who can push Smith to 43-off. Won the 2026 Masters and Royal Nautique Pro in Morocco back-to-back.',
     results:{ moomba:{place:3,score:'3rd'}, swiss:{place:5,score:'3.50 @ 10.25m'}, masters:{place:1,score:'—'}, morocco:{place:1,score:'5.00 @ 10.25m'}, monaco:{place:3,score:'3.50 @ 10.25m'} } },
   { name:'Dane Mechler', country:'USA', div:'men', seasonPts:'4th overall',
     results:{ monaco:{place:5,score:'3.50 @ 10.25m'} } },
   { name:'William Asher', country:'GBR', div:'men', seasonPts:'',
+    bio:'Age 43. 2x World Slalom Champion (2005, 2009). Over 30 professional victories including 5 U.S. Masters titles. One of the most powerful right-foot-forward skiers in history. Finished 2023-2024 ranked #3 in the world. Still running deep into 41-off in his 40s — remarkable longevity.',
     results:{ swiss:{place:6,score:'3.00 @ 10.25m'}, morocco:{place:3,score:'2.25 @ 10.25m'}, monaco:{place:4,score:'3.50 @ 10.25m'} } },
   { name:'Thomas Degasperi', country:'ITA', div:'men', seasonPts:'',
+    bio:'Age 45. Born Jan 18, 1981 in Trento, Italy. 2x World Slalom Champion (2007, 2011). Multi-time European Champion. Started skiing at age 5 at his father\'s ski school in northern Italy. Known for his cool demeanor and incredible consistency. Still ranked top 10 globally at 45 — a true veteran icon. Local favorite whenever the tour comes to Italy.',
     results:{ moomba:{place:2,score:'2nd'}, swiss:{place:16,score:'Did not run 10.25m'}, monaco:{place:8,score:'6.00 @ 10.75m'} } },
   { name:'Sacha Descuns', country:'FRA', div:'men', seasonPts:'',
     results:{ monaco:{place:2,score:'5.00 @ 10.25m'} } },
   { name:'Brando Caruso', country:'ITA', div:'men', seasonPts:'',
+    bio:'Italian pro slalom skier. Won the 2023 U21 European Slalom Championship. One of Italy\'s brightest young talents alongside Degasperi. Reached 5th place at the 2026 Royal Nautique Pro in Morocco — a breakthrough pro result.',
     results:{ morocco:{place:5,score:'1.50 @ 10.75m'}, monaco:{place:13,score:'1.50/5.50 R1/R2'} } },
   { name:'Carlo Allais', country:'ITA', div:'men', seasonPts:'',
     results:{} },
@@ -156,24 +163,32 @@ const athletes = [
 
   // ===== PRO WOMEN'S SLALOM =====
   { name:'Jaimee Bull', country:'CAN', div:'women', seasonPts:'1st overall',
+    bio:'Age 26. From North Bay, Ontario. Trains on the cold waters of Trout Lake. 3x World Slalom Champion (2021, 2023, 2025). 5x Waterski Pro Tour Champion. Holds the U21 World Slalom Record. Remarkably balanced her pro career while earning a mechanical engineering degree at the University of Louisiana at Lafayette. Known for high-intensity, tactical consistency.',
     results:{ moomba:{place:2,score:'2nd'}, swiss:{place:2,score:'4.00 @ 10.75m'}, masters:{place:2,score:'—'}, morocco:{place:1,score:'3.00 @ 10.75m'}, monaco:{place:1,score:'3.00 @ 10.75m (runoff win)'} } },
   { name:'Regina Jaquess', country:'USA', div:'women', seasonPts:'2nd overall',
+    bio:'Age 42. Born June 7, 1984. From Santa Rosa Beach, Florida. Arguably the greatest female water skier of all time. Current Women\'s Slalom World Record holder. Over 30 international medals. Multiple World Championship titles in Slalom, Jump, and Overall. On the U.S. Elite Team since 2001 — over 25 years at the top. A pharmacist by trade, owns Emerald Coast Compounding Pharmacy. Won the 2026 Swiss Pro and Moomba Masters.',
     results:{ moomba:{place:1,score:'1st'}, swiss:{place:1,score:'1.50 @ 10.25m'}, masters:{place:1,score:'—'} } },
   { name:'Allie Nicholson', country:'USA', div:'women', seasonPts:'3rd overall',
+    bio:'American pro slalom skier. Solidly in the top 3 of the 2026 Pro Tour standings with multiple podium finishes. Consistent performer at the 10.75m line length.',
     results:{ monaco:{place:3,score:'3.00 @ 10.75m'} } },
   { name:'Trinidad Espinal', country:'CHI', div:'women', seasonPts:'',
+    bio:'Chilean pro slalom skier. Dramatic 2nd place at the 2026 Monaco Waterski Cup, losing to Jaimee Bull in a runoff tie-break. One of South America\'s top slalom talents.',
     results:{ monaco:{place:2,score:'3.00 @ 10.75m'} } },
   { name:'Neilly Ross', country:'CAN', div:'women', seasonPts:'',
+    bio:'From Canada. Multi-time World Champion and world record holder in Women\'s Tricks. Sister of Charlie Ross. Also competes in slalom on the Pro Tour, showing versatility across disciplines. Placed 2nd at the 2026 Royal Nautique Pro in Morocco, just behind Jaimee Bull.',
     results:{ morocco:{place:2,score:'3.00 @ 10.75m'}, monaco:{place:4,score:'2.00 @ 10.75m'} } },
   { name:'Alice Bagnoli', country:'ITA', div:'women', seasonPts:'',
+    bio:'Italy\'s top female pro slalom skier. Strong local support expected at Recetto. Placed 4th at the Royal Nautique Pro in Morocco and 5th at Monaco — consistent top-5 finishes on the 2026 tour.',
     results:{ morocco:{place:4,score:'5.00 @ 11.25m'}, monaco:{place:5,score:'5.00 @ 11.25m'} } },
   { name:'Elizabeth Montavon', country:'USA', div:'women', seasonPts:'',
+    bio:'American pro slalom skier. Podium finisher at the 2026 Royal Nautique Pro in Morocco (3rd place). Consistent performer at the 10.75m line.',
     results:{ morocco:{place:3,score:'2.00 @ 10.75m'}, monaco:{place:6,score:'4.50 @ 11.25m'} } },
   { name:'Alexandra Garcia', country:'USA', div:'women', seasonPts:'',
     results:{ monaco:{place:7,score:'3.00 @ 11.25m'} } },
   { name:'Sade Ferguson', country:'AUS', div:'women', seasonPts:'',
     results:{ monaco:{place:8,score:'3.00 @ 11.25m'} } },
   { name:'Kennedy Hansen', country:'USA', div:'women', seasonPts:'',
+    bio:'American pro slalom skier. 3rd place at the 2026 Moomba Masters in Melbourne. Also placed 5th at the Royal Nautique Pro in Morocco. Rising talent on the Pro Tour.',
     results:{ moomba:{place:3,score:'3rd'}, morocco:{place:5,score:'4.00 @ 11.25m'}, monaco:{place:9,score:'5.50 @ 11.25m'} } },
   { name:'Annemarie Wroblewski', country:'USA', div:'women', seasonPts:'',
     results:{ monaco:{place:10,score:'3.50 @ 11.25m'} } },
@@ -186,6 +201,7 @@ const athletes = [
   { name:'Giannina Bonnemann Mechler', country:'GER', div:'women', seasonPts:'',
     results:{ monaco:{place:14,score:'3.00 @ 11.25m'} } },
   { name:'Beatrice Ianni', country:'ITA', div:'women', seasonPts:'',
+    bio:'Italian pro slalom skier. Competed at the 2026 Monaco Waterski Cup, placing 14th. Part of the strong Italian contingent at Recetto alongside Bagnoli and Gioiello.',
     results:{ monaco:{place:14,score:'3.00 @ 11.25m'} } },
   { name:'Belinda Boekee', country:'NED', div:'women', seasonPts:'', results:{} },
   { name:'Camilla Gioiello', country:'ITA', div:'women', seasonPts:'', results:{} },
@@ -240,6 +256,7 @@ function renderList() {
 
     const details = eventRows || '<div class="no-data">No 2026 pro event results yet for this skier.</div>';
     const ptsHtml = a.seasonPts ? `<div class="season-pts"><div class="label">2026 Season Standing</div><div class="val">${a.seasonPts}</div></div>` : '';
+    const bioHtml = a.bio ? `<div class="ac-bio">${a.bio}</div>` : '';
 
     return `<div class="athlete-card" onclick="toggleCard(this)">
       <div class="ac-top">
@@ -251,6 +268,7 @@ function renderList() {
         <div class="ac-div ${a.div}">${divLabel}</div>
       </div>
       <div class="ac-details">
+        ${bioHtml}
         ${details}
         ${ptsHtml}
       </div>
