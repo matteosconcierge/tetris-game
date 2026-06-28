@@ -91,6 +91,7 @@ const FLAGS = {
 
 // 2026 Pro Tour slalom events
 const EVENTS = [
+  { key:'moomba', name:'Moomba Masters', date:'Mar 7-9', location:'Melbourne, AUS' },
   { key:'swiss', name:'Swiss Pro Slalom', date:'May 3', location:'Florida, USA' },
   { key:'masters', name:'Masters', date:'May 24-26', location:'Callaway Gardens, USA' },
   { key:'morocco', name:'Royal Nautique Pro', date:'Jun 5-7', location:'Rabat, Morocco' },
@@ -101,17 +102,17 @@ const EVENTS = [
 const athletes = [
   // ===== PRO MEN'S SLALOM =====
   { name:'Charlie Ross', country:'CAN', div:'men', seasonPts:'1st overall',
-    results:{ swiss:{place:1,score:'6.00 @ 10.25m'}, masters:{place:3,score:'—'}, morocco:{place:2,score:'5.00 @ 10.25m'}, monaco:{place:1,score:'1.00 @ 9.75m'} } },
+    results:{ moomba:{place:1,score:'1st'}, swiss:{place:1,score:'6.00 @ 10.25m'}, masters:{place:3,score:'—'}, morocco:{place:2,score:'5.00 @ 10.25m'}, monaco:{place:1,score:'1.00 @ 9.75m'} } },
   { name:'Nate Smith', country:'USA', div:'men', seasonPts:'2nd overall',
     results:{ swiss:{place:2,score:'4.50 @ 10.25m'}, monaco:{place:'DNF',score:'Did not advance'} } },
   { name:'Freddie Winter', country:'GBR', div:'men', seasonPts:'3rd overall',
-    results:{ swiss:{place:5,score:'3.50 @ 10.25m'}, masters:{place:1,score:'—'}, morocco:{place:1,score:'5.00 @ 10.25m'}, monaco:{place:3,score:'3.50 @ 10.25m'} } },
+    results:{ moomba:{place:3,score:'3rd'}, swiss:{place:5,score:'3.50 @ 10.25m'}, masters:{place:1,score:'—'}, morocco:{place:1,score:'5.00 @ 10.25m'}, monaco:{place:3,score:'3.50 @ 10.25m'} } },
   { name:'Dane Mechler', country:'USA', div:'men', seasonPts:'4th overall',
     results:{ monaco:{place:5,score:'3.50 @ 10.25m'} } },
   { name:'William Asher', country:'GBR', div:'men', seasonPts:'',
     results:{ swiss:{place:6,score:'3.00 @ 10.25m'}, morocco:{place:3,score:'2.25 @ 10.25m'}, monaco:{place:4,score:'3.50 @ 10.25m'} } },
   { name:'Thomas Degasperi', country:'ITA', div:'men', seasonPts:'',
-    results:{ swiss:{place:16,score:'Did not run 10.25m'}, monaco:{place:8,score:'6.00 @ 10.75m'} } },
+    results:{ moomba:{place:2,score:'2nd'}, swiss:{place:16,score:'Did not run 10.25m'}, monaco:{place:8,score:'6.00 @ 10.75m'} } },
   { name:'Sacha Descuns', country:'FRA', div:'men', seasonPts:'',
     results:{ monaco:{place:2,score:'5.00 @ 10.25m'} } },
   { name:'Brando Caruso', country:'ITA', div:'men', seasonPts:'',
@@ -122,6 +123,8 @@ const athletes = [
   { name:'Leo Cederquist', country:'SWE', div:'men', seasonPts:'', results:{} },
   { name:'Tim Tornquist', country:'SWE', div:'men', seasonPts:'',
     results:{ morocco:{place:4,score:'4.50 @ 10.75m'} } },
+  { name:'Corey Saddington', country:'AUS', div:'men', seasonPts:'',
+    results:{ moomba:{place:4,score:'4th'} } },
   { name:'Arron Davies', country:'GBR', div:'men', seasonPts:'',
     results:{ monaco:{place:14,score:'2.50 @ 10.75m'} } },
   { name:'Carter Eaton', country:'USA', div:'men', seasonPts:'', results:{} },
@@ -153,9 +156,9 @@ const athletes = [
 
   // ===== PRO WOMEN'S SLALOM =====
   { name:'Jaimee Bull', country:'CAN', div:'women', seasonPts:'1st overall',
-    results:{ swiss:{place:2,score:'4.00 @ 10.75m'}, masters:{place:2,score:'—'}, morocco:{place:1,score:'3.00 @ 10.75m'}, monaco:{place:1,score:'3.00 @ 10.75m (runoff win)'} } },
+    results:{ moomba:{place:2,score:'2nd'}, swiss:{place:2,score:'4.00 @ 10.75m'}, masters:{place:2,score:'—'}, morocco:{place:1,score:'3.00 @ 10.75m'}, monaco:{place:1,score:'3.00 @ 10.75m (runoff win)'} } },
   { name:'Regina Jaquess', country:'USA', div:'women', seasonPts:'2nd overall',
-    results:{ swiss:{place:1,score:'1.50 @ 10.25m'}, masters:{place:1,score:'—'} } },
+    results:{ moomba:{place:1,score:'1st'}, swiss:{place:1,score:'1.50 @ 10.25m'}, masters:{place:1,score:'—'} } },
   { name:'Allie Nicholson', country:'USA', div:'women', seasonPts:'3rd overall',
     results:{ monaco:{place:3,score:'3.00 @ 10.75m'} } },
   { name:'Trinidad Espinal', country:'CHI', div:'women', seasonPts:'',
@@ -171,7 +174,7 @@ const athletes = [
   { name:'Sade Ferguson', country:'AUS', div:'women', seasonPts:'',
     results:{ monaco:{place:8,score:'3.00 @ 11.25m'} } },
   { name:'Kennedy Hansen', country:'USA', div:'women', seasonPts:'',
-    results:{ morocco:{place:5,score:'4.00 @ 11.25m'}, monaco:{place:9,score:'5.50 @ 11.25m'} } },
+    results:{ moomba:{place:3,score:'3rd'}, morocco:{place:5,score:'4.00 @ 11.25m'}, monaco:{place:9,score:'5.50 @ 11.25m'} } },
   { name:'Annemarie Wroblewski', country:'USA', div:'women', seasonPts:'',
     results:{ monaco:{place:10,score:'3.50 @ 11.25m'} } },
   { name:'Illana Bischofberger', country:'FRA', div:'women', seasonPts:'',
